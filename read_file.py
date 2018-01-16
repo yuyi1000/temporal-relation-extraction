@@ -766,7 +766,12 @@ class THYME(object):
                 if len(event_one_sent) >= 1 and len(timex3_one_sent) >= 1:
                     for one_event in event_one_sent:
                         for one_timex3 in timex3_one_sent:
-                            entity_pair_list.append((one_event, one_timex3))
+                            # put smaller beginning of the two into the first
+                            # position of entity pair
+                            if one_event[0] < one_timex3[0]:
+                                entity_pair_list.append((one_event, one_timex3))
+                            else:
+                                entity_pair_list.append((one_timex3, one_event))
 
             i += 1
 
