@@ -64,6 +64,23 @@ class TLINK(object):
         print ("source begin: ", self.source_b, ", source end: ", self.source_e)
         print ("target begin: ", self.target_b, ", target end: ", self.target_e)
         print ("type: ", self.type_)
+
+# TLINK2 reflects the newest structure we have been used
+# We no longer use the notation of source and target
+# instead, we use RELATION to show entity1 RELATION entity2
+# and RELATION_inverse to show entity2 RELATION entity1
+class TLINK2:
+    def __init__(self, entity1_b, entity1_e, entity2_b, entity2_e, type_):
+        self.entity1_b = entity1_b
+        self.entity1_e = entity1_e
+        self.entity2_b = entity2_b
+        self.entity2_e = entity2_e
+
+    def displayTLINK2(self):
+        print ("entity1 begin: ", self.entity1_b, ", entity1 end: ", self.entity1_e)
+        print ("entity2 begin: ", self.entity2_b, ", entity2 end: ", self.entity2_e)
+        print ("type: ", self.type_)
+        
         
 
 ################################################################
@@ -656,7 +673,32 @@ class THYME(object):
                 # print ("label: ", label)
             
         return tlink_struct_list
+
+
+
+    def get_tlink2_struct(self, sent_token_list, tlink2_list):
+        tlink2_struct_list = [];
+        for tlink2 in tlink2_list:
+            tlink2_min = min(tlink2.entity1_b, tlink2.entity1_e, tlink2.entity2_b, tlink2.entity2_e)
+            tlink2_max = max(tlink2.entity1_b, tlink2.entity1_e, tlink2.entity2_b, tlink2.entity2_e)
+            sent_idx = self.get_number_of_sent((tlink2_min, tlink2_max), sent_token_list)
+            sent_token = sent_token_list[sent_idx]
+            # source_one_hot = self.get_one_hot_encoding(sent_token, (tlink.source_b, tlink.source_e))
+            # target_one_hot = self.get_one_hot_encoding(sent_token, (tlink.target_b, tlink.target_e))
+            # boolean_feature = 1 if tlink.source_b < tlink.target_b else -1
+            # boolean_features = [boolean_feature] * len(sent_token)
+
+            label = self.label_dict[tlink2.type_]
                 
+            # filter some tlink2 structs
+            # if (sent_idx != -1 and sum(source_one_hot) != 0 and sum(target_one_hot) != 0):
+            #     tlink2_struct_list.append(((tlink2.source_b, tlink2.source_e), (tlink2.target_b, tlink2.target_e), source_one_hot,
+            #                               target_one_hot, boolean_features, sent_idx, label))
+            tlink2_struct_list.append((tlink2.entity1_b, tlink2.entity1_e, tlink2.entity2_b, tlink2.entity2_e), sent_idx, label)
+            
+        return tlink2_struct_list
+        
+    
         
         
 
@@ -745,6 +787,7 @@ class THYME(object):
     # [((272, 278), (286, 295)), ((272, 278), (315, 328)), ((272, 278), (329, 338)), ...]
     # compared with get_entity_pair_list_within_one_sentence, the version 2 use combination instead of permutation
     # so in version 1 both (A, B) and (B, A) will show up while in version 2 only (A, B) show up
+    # Each pair reflects its position in the sentence. The first item in the pair always comes before the second in the sentence
     def get_entity_pair_list_within_one_sentence2(self, event_list, timex3_list, sent_token_list, event_vs_event, event_vs_time):
         entity_pair_list = []
         
@@ -838,6 +881,26 @@ class THYME(object):
                 
         return tlink_aug_list
 
+
+    def augment_tlink2_list(self, entity_pair_one_sent_list, tlink_list):
+        tlink2_aug_list = []
+
+        for entity_pair in entity_pair_one_sent_list:
+            if not self.inside_tlink_list2(entity_pair, tlink_list):
+                tlink2_aug_list.append(TLINK2(entity_pair[0][0], entity_pair[0][1], entity_pair[1][0], entity_pair[1][1], 'NONE'))
+
+        for tlink in tlink_list:
+            if tlink.source_b < tlink.target.b:
+                if tlink.type_ != "NONE" and tlink.type_ != "OVERLAP":
+                    tlink.type_ += "_LR"
+                tlink2_aug_list.append(TLINK2(tlink.source_b, tlink.source_e, tlink.target_b, tlink.target_e, tlink.type_ + "_LR"))
+            else:
+                if tlink.type_ != "NONE" and tlink.type_ != "OVERLAP":
+                    tlink.type_ += "_RL"
+                tlink2_aug_list.append(TLINK2(tlink.target_b, tlink.target_e, tlink.source_b, tlink.source_e, tlink.type_))
+        return tlink2_aug_list
+        
+    
     
 
     def list_to_array(self, one_list, max_len, aug=0):
@@ -1142,7 +1205,11 @@ class THYME(object):
 
             tlink_aug_list = self.augment_tlink_list2(entity_pair_one_sent_list, tlink_list)
 
-            print ("tlink aug list length: ", len(tlink_aug_list))
+            # use tlink2 as it reflects the newest structure
+            tlink2_aug_list = self.augment_tlink2_list(entity_pair_one_sent_list, tlink_list)
+
+            
+            # print ("tlink aug list length: ", len(tlink_aug_list))
             # for tlink in tlink_aug_list:
                 # tlink.displayTLINK()
 
@@ -1152,6 +1219,10 @@ class THYME(object):
             print ("tlink struct aug list length: ", len(tlink_struct_aug_list))
 
 
+            tlink2_struct_aug_list = self.get_tlink2_struct(sent_token_list, tlink2_aug_list)
+            print ("tlink2 struct aug list length: ", len(tlink2_struct_aug_list))
+            
+            
             sent_embed_list_r = []
             
             pos_embed_source_list_r = []
@@ -1207,6 +1278,8 @@ class THYME(object):
                 # print ("event one hot: ", event_one_hot_r)
                 # print ("timex3 one hot: ", timex3_one_hot_r)
 
+                
+                ###################################################
                 # add xml tag to sentence embedding
                 # self.get_sent_embed_with_xml_tag(sent_embed_r, source_one_hot_r, target_one_hot_r, event_one_hot_r, timex3_one_hot_r)
 
