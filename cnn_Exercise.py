@@ -19,7 +19,7 @@ from read_file import *
 # Set parameters 
 parser = argparse.ArgumentParser('CNN Exercise.')
 parser.add_argument('--learning_rate', 
-                    type=float, default=0.1,
+                    type=float, default=0.0001,
                     help='Initial learning rate.')
 parser.add_argument('--num_epochs',
                     type=int,
@@ -27,26 +27,22 @@ parser.add_argument('--num_epochs',
                     help='Number of epochs to run trainer.')
 parser.add_argument('--drop_out',
                     type=float,
-                    default=0.4, 
+                    default=0.25, 
                     help='drop out rate for last layer.')
 parser.add_argument('--decay',
                     type=float,
                     default=0.001, 
                     help='Decay rate of l2 regularization.')
 parser.add_argument('--batch_size', 
-                    type=int, default=100, 
+                    type=int, default=50, 
                     help='Batch size. Must divide evenly into the dataset sizes.')
 parser.add_argument('--log_dir', 
                     type=str, 
                     default='logs', 
                     help='Directory to put logging.')
-parser.add_argument('--visibleSize',
-                    type=int,
-                    default=str(28 * 28),
-                    help='Used for gradient checking.')
 parser.add_argument('--hidden_size', 
                     type=int,
-                    default='100',
+                    default='300',
                     help='.')
 parser.add_argument('--model_path',
                     type=str,
@@ -65,8 +61,8 @@ parser.add_argument('--thyme_data_dir',
                     # default='../data/padding_test_event_vs_event.pkl',
                     # default='../data/padding_test_event_vs_time.pkl',
                     # default='../data/padding_event_vs_event.pkl',
-                    # default='../data/padding_event_vs_time_with_xml_tag.pkl',
-                    default='../data/padding_event_vs_time_without_xml_tag.pkl',
+                    default='../data/padding_event_vs_time_with_xml_tag.pkl',
+                    # default='../data/padding_event_vs_time_without_xml_tag.pkl',
                     # default='../data/padding_event_vs_time_without_xml_tag_pos_embed_source.pkl',
                     help='Directory to put the thyme data.')
 
@@ -209,21 +205,23 @@ sent_embed = train_set[0][idx]
 # pos_embed_source = train_set[1][idx]
 # pos_embed_target = train_set[2][idx]
 
-pos_embed_first_entity = train_set[1][idx]
-pos_embed_second_entity = train_set[2][idx]
+# pos_embed_first_entity = train_set[1][idx]
+# pos_embed_second_entity = train_set[2][idx]
 
-event_bitmap = train_set[3][idx]
-timex3_bitmap = train_set[4][idx]
-source_bitmap = train_set[5][idx]
-target_bitmap = train_set[6][idx]
+event_bitmap = train_set[1][idx]
+timex3_bitmap = train_set[2][idx]
+source_bitmap = train_set[3][idx]
+target_bitmap = train_set[4][idx]
 # boolean_features = train_set[7][idx]
 # label = train_set[8][idx]
-label = train_set[7][idx]
-# label = train_set[5][idx]
+# label = train_set[7][idx]
+label = train_set[5][idx]
 
 # train_set = [sent_embed, pos_embed_source, pos_embed_target, event_bitmap, timex3_bitmap, source_bitmap, target_bitmap, boolean_features, label]
 # train_set = [sent_embed, pos_embed_source, pos_embed_target, event_bitmap, timex3_bitmap, source_bitmap, target_bitmap, label]
-train_set = [sent_embed, pos_embed_first_entity, pos_embed_second_entity, event_bitmap, timex3_bitmap, source_bitmap, target_bitmap, label]
+train_set = [sent_embed, event_bitmap, timex3_bitmap, source_bitmap, target_bitmap, label]
+
+# train_set = [sent_embed, pos_embed_first_entity, pos_embed_second_entity, event_bitmap, timex3_bitmap, source_bitmap, target_bitmap, label]
 # train_set = [sent_embed, pos_embed_source, pos_embed_target, event_bitmap, timex3_bitmap, label]
 
 # ======================================================================

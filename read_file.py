@@ -340,19 +340,19 @@ class THYME(object):
 
             ###############################
             # Full dataset
-            # self.train_set = self.load_data(pattern, nlp, thyme_data_path + '/train/', thyme_anno_path + '/train/', train_data_files, train_anno_files, event_vs_event=False, event_vs_time=True)
-            # self.dev_set = self.load_data(pattern, nlp, thyme_data_path + '/dev/', thyme_anno_path + '/dev/', dev_data_files, dev_anno_files, event_vs_event=False, event_vs_time=True)
-            # self.test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files, test_anno_files, event_vs_event=False, event_vs_time=True)
-            # self.closure_test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
-            #                                        test_anno_files, event_vs_event=False, event_vs_time=True, closure_test_set=True)
+            self.train_set = self.load_data(pattern, nlp, thyme_data_path + '/train/', thyme_anno_path + '/train/', train_data_files, train_anno_files, event_vs_event=False, event_vs_time=True)
+            self.dev_set = self.load_data(pattern, nlp, thyme_data_path + '/dev/', thyme_anno_path + '/dev/', dev_data_files, dev_anno_files, event_vs_event=False, event_vs_time=True)
+            self.test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files, test_anno_files, event_vs_event=False, event_vs_time=True)
+            self.closure_test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
+                                                   test_anno_files, event_vs_event=False, event_vs_time=True, closure_test_set=True)
 
             ################################
             # Smaller dataset for debugging
-            self.train_set = self.load_data(pattern, nlp, thyme_data_path + '/train/', thyme_anno_path + '/train/', train_data_files, train_anno_files_test, event_vs_event=False, event_vs_time=True)
-            self.dev_set = self.load_data(pattern, nlp, thyme_data_path + '/dev/', thyme_anno_path + '/dev/', dev_data_files, dev_anno_files_test, event_vs_event=False, event_vs_time=True)
-            self.test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files, test_anno_files_test, event_vs_event=False, event_vs_time=True)
-            self.closure_test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/',
-                                                   test_data_files, test_anno_files_test, event_vs_event=False, event_vs_time=True, closure_test_set=True)
+            # self.train_set = self.load_data(pattern, nlp, thyme_data_path + '/train/', thyme_anno_path + '/train/', train_data_files, train_anno_files_test, event_vs_event=False, event_vs_time=True)
+            # self.dev_set = self.load_data(pattern, nlp, thyme_data_path + '/dev/', thyme_anno_path + '/dev/', dev_data_files, dev_anno_files_test, event_vs_event=False, event_vs_time=True)
+            # self.test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files, test_anno_files_test, event_vs_event=False, event_vs_time=True)
+            # self.closure_test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/',
+            #                                        test_data_files, test_anno_files_test, event_vs_event=False, event_vs_time=True, closure_test_set=True)
             
 
     def find_entity(self, entity_list, id_):
@@ -937,16 +937,19 @@ class THYME(object):
         # pos_source_embed_list_p = self.list_to_array(data_set[1], max_sent_len)
         # pos_target_embed_list_p = self.list_to_array(data_set[2], max_sent_len)
 
-        pos_embed_first_entity_list_p = self.list_to_array(data_set[1], max_sent_len)
-        pos_embed_second_entity_list_p = self.list_to_array(data_set[2], max_sent_len)        
+        # pos_embed_first_entity_list_p = self.list_to_array(data_set[1], max_sent_len)
+        # pos_embed_second_entity_list_p = self.list_to_array(data_set[2], max_sent_len)        
         
-        event_one_hot_list_p = self.list_to_array(data_set[3], max_sent_len)
+        # event_one_hot_list_p = self.list_to_array(data_set[3], max_sent_len)
+        # timex3_one_hot_list_p = self.list_to_array(data_set[4], max_sent_len)
+        # source_one_hot_list_p = self.list_to_array(data_set[5], max_sent_len)
+        # target_one_hot_list_p = self.list_to_array(data_set[6], max_sent_len)
 
-        # print ("event one hot list p: ", event_one_hot_list_p)
-        
-        timex3_one_hot_list_p = self.list_to_array(data_set[4], max_sent_len)
-        source_one_hot_list_p = self.list_to_array(data_set[5], max_sent_len)
-        target_one_hot_list_p = self.list_to_array(data_set[6], max_sent_len)
+        event_one_hot_list_p = self.list_to_array(data_set[1], max_sent_len)
+        timex3_one_hot_list_p = self.list_to_array(data_set[2], max_sent_len)
+        source_one_hot_list_p = self.list_to_array(data_set[3], max_sent_len)
+        target_one_hot_list_p = self.list_to_array(data_set[4], max_sent_len)
+
         
         # boolean_features_list_p = self.list_to_array(data_set[7], max_sent_len)
 
@@ -956,8 +959,11 @@ class THYME(object):
         # data = [sent_embed_list_p, pos_source_embed_list_p, pos_target_embed_list_p, event_one_hot_list_p, timex3_one_hot_list_p,
         #         source_one_hot_list_p, target_one_hot_list_p, numpy.asarray(data_set[7], dtype=numpy.int32)]
 
-        data = [sent_embed_list_p, pos_embed_first_entity_list_p, pos_embed_second_entity_list_p, event_one_hot_list_p, timex3_one_hot_list_p,
-                source_one_hot_list_p, target_one_hot_list_p, numpy.asarray(data_set[7], dtype=numpy.int32)]
+        # data = [sent_embed_list_p, pos_embed_first_entity_list_p, pos_embed_second_entity_list_p, event_one_hot_list_p, timex3_one_hot_list_p,
+        #         source_one_hot_list_p, target_one_hot_list_p, numpy.asarray(data_set[7], dtype=numpy.int32)]
+
+        data = [sent_embed_list_p, event_one_hot_list_p, timex3_one_hot_list_p, source_one_hot_list_p,
+                target_one_hot_list_p, numpy.asarray(data_set[5], dtype=numpy.int32)]
 
         
         # data = [sent_embed_list_p, pos_source_embed_list_p, pos_target_embed_list_p, event_one_hot_list_p, timex3_one_hot_list_p,
@@ -1206,7 +1212,7 @@ class THYME(object):
             tlink_aug_list = self.augment_tlink_list2(entity_pair_one_sent_list, tlink_list)
 
             # use tlink2 as it reflects the newest structure
-            tlink2_aug_list = self.augment_tlink2_list(entity_pair_one_sent_list, tlink_list)
+            # tlink2_aug_list = self.augment_tlink2_list(entity_pair_one_sent_list, tlink_list)
 
             
             # print ("tlink aug list length: ", len(tlink_aug_list))
@@ -1219,8 +1225,8 @@ class THYME(object):
             print ("tlink struct aug list length: ", len(tlink_struct_aug_list))
 
 
-            tlink2_struct_aug_list = self.get_tlink2_struct(sent_token_list, tlink2_aug_list)
-            print ("tlink2 struct aug list length: ", len(tlink2_struct_aug_list))
+            # tlink2_struct_aug_list = self.get_tlink2_struct(sent_token_list, tlink2_aug_list)
+            # print ("tlink2 struct aug list length: ", len(tlink2_struct_aug_list))
             
             
             sent_embed_list_r = []
@@ -1281,7 +1287,7 @@ class THYME(object):
                 
                 ###################################################
                 # add xml tag to sentence embedding
-                # self.get_sent_embed_with_xml_tag(sent_embed_r, source_one_hot_r, target_one_hot_r, event_one_hot_r, timex3_one_hot_r)
+                self.get_sent_embed_with_xml_tag(sent_embed_r, source_one_hot_r, target_one_hot_r, event_one_hot_r, timex3_one_hot_r)
 
                 sent_embed_list_r.append(sent_embed_r)
                 pos_embed_source_list_r.append(pos_embed_source_r)
@@ -1301,12 +1307,19 @@ class THYME(object):
             # one_file_list_r = [sent_embed_list_r, pos_embed_source_list_r, pos_embed_target_list_r, event_one_hot_list_r, timex3_one_hot_list_r,
             #                    source_one_hot_list_r, target_one_hot_list_r, boolean_features_list_r, label_list_r]
 
+            # """
+            # Although source_one_hot and target_one_hot is not used in the neural network (actual it can't), it is used in deciding the closure.
+            # """
+            
+            # one_file_list_r = [sent_embed_list_r, pos_embed_source_list_r, pos_embed_target_list_r, event_one_hot_list_r, timex3_one_hot_list_r,
+            #                    source_one_hot_list_r, target_one_hot_list_r, label_list_r]
+
             """
             Although source_one_hot and target_one_hot is not used in the neural network (actual it can't), it is used in deciding the closure.
             """
             
-            one_file_list_r = [sent_embed_list_r, pos_embed_source_list_r, pos_embed_target_list_r, event_one_hot_list_r, timex3_one_hot_list_r,
-                               source_one_hot_list_r, target_one_hot_list_r, label_list_r]
+            one_file_list_r = [sent_embed_list_r, event_one_hot_list_r, timex3_one_hot_list_r, source_one_hot_list_r, target_one_hot_list_r, label_list_r]
+            
 
             # one_file_list_r = [sent_embed_list_r, pos_embed_first_entity_list_r, pos_embed_second_entity_list_r, event_one_hot_list_r, timex3_one_hot_list_r,
             #                    source_one_hot_list_r, target_one_hot_list_r, label_list_r]
@@ -1322,12 +1335,12 @@ class THYME(object):
                 #                     all_files_list_r[3] + one_file_list_r[3], all_files_list_r[4] + one_file_list_r[4], all_files_list_r[5] + one_file_list_r[5],
                 #                     all_files_list_r[6] + one_file_list_r[6], all_files_list_r[7] + one_file_list_r[7], all_files_list_r[8] + one_file_list_r[8]]
 
-                all_files_list_r = [all_files_list_r[0] + one_file_list_r[0], all_files_list_r[1] + one_file_list_r[1], all_files_list_r[2] + one_file_list_r[2],
-                                    all_files_list_r[3] + one_file_list_r[3], all_files_list_r[4] + one_file_list_r[4], all_files_list_r[5] + one_file_list_r[5],
-                                    all_files_list_r[6] + one_file_list_r[6], all_files_list_r[7] + one_file_list_r[7]]
-
                 # all_files_list_r = [all_files_list_r[0] + one_file_list_r[0], all_files_list_r[1] + one_file_list_r[1], all_files_list_r[2] + one_file_list_r[2],
-                #                     all_files_list_r[3] + one_file_list_r[3], all_files_list_r[4] + one_file_list_r[4], all_files_list_r[5] + one_file_list_r[5]]
+                #                     all_files_list_r[3] + one_file_list_r[3], all_files_list_r[4] + one_file_list_r[4], all_files_list_r[5] + one_file_list_r[5],
+                #                     all_files_list_r[6] + one_file_list_r[6], all_files_list_r[7] + one_file_list_r[7]]
+
+                all_files_list_r = [all_files_list_r[0] + one_file_list_r[0], all_files_list_r[1] + one_file_list_r[1], all_files_list_r[2] + one_file_list_r[2],
+                                    all_files_list_r[3] + one_file_list_r[3], all_files_list_r[4] + one_file_list_r[4], all_files_list_r[5] + one_file_list_r[5]]
 
                 
         return all_files_list_r
@@ -1451,8 +1464,8 @@ def main():
     # word_emb_path = '/home/yuyi/models/glove.840B.300d.txt'
     # embedding = WordEmbedding2(word_emb_path, thyme.vocab)
 
-    # embedding_path = '/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl'
-    embedding_path = '/home/yuyi/cs6890/project/data/embedding_without_xml_tag.pkl'
+    embedding_path = '/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl'
+    # embedding_path = '/home/yuyi/cs6890/project/data/embedding_without_xml_tag.pkl'
     # pickle.dump(embedding, open(embedding_path, 'wb'))
 
 
@@ -1485,10 +1498,10 @@ def main():
 
     # padding_data_path = '/home/yuyi/cs6890/project/data/padding.pkl'
     # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_event.pkl'
-    # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag.pkl'
+    padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag.pkl'
     # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_without_xml_tag.pkl'
     # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_without_xml_tag_pos_embed_source.pkl'
-    # pickle.dump([train_set, dev_set, test_set, closure_test_set, train_label_count], open(padding_data_path, 'wb'))
+    pickle.dump([train_set, dev_set, test_set, closure_test_set, train_label_count], open(padding_data_path, 'wb'))
 
     # print ("train_set[0] length: ", len(train_set[0]))
     # print ("train_set[0]: ", train_set[0])

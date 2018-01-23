@@ -22,7 +22,7 @@ class ConvNet(object):
     return ffn
 
   # Model 2: one conv layer
-  def model_2(self, rep, event_one_hot, timex3_one_hot, source_one_hot, target_one_hot, hidden_size, max_sen_len, decay):
+  def model_2(self, rep, event_one_hot, timex3_one_hot, hidden_size, max_sen_len, decay):
     # ----------------- YOUR CODE HERE ----------------------
     #
 
@@ -39,13 +39,34 @@ class ConvNet(object):
     # sys.exit()
     # conv1 = tf.layers.conv2d(inputs=X_4d, filters=10, kernel_size=[5, 315], activation=tf.nn.relu)
     # conv1 = tf.layers.conv2d(inputs=X_4d, filters=10, kernel_size=[5, 314], activation=tf.nn.relu)
-    conv1 = tf.layers.conv2d(inputs=X_4d, filters=10, kernel_size=[5, 312], activation=tf.nn.relu)
-    print ("conv1 shape: ", conv1.get_shape())
+
+    ###########################################################
+    # using 200 filters each for filter sizes 2, 3, 4 and 5
+    
+    conv1_size2 = tf.layers.conv2d(inputs=X_4d, filters=200, kernel_size=[2, 302], activation=tf.nn.relu)
+    print ("conv1_size2 shape: ", conv1_size2.get_shape())
     # pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 1], strides=2)
-    pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[max_sen_len - 4, 1], strides=[max_sen_len - 4, 1])
-    print ("pool1 shape: ", pool1.get_shape())
-    pool1_flat = tf.reshape(pool1, [-1, 10])
-    print ("pool1_flat: ", pool1_flat.get_shape())
+    pool1_size2 = tf.layers.max_pooling2d(inputs=conv1_size2, pool_size=[max_sen_len - 1, 1], strides=[max_sen_len - 1, 1])
+    print ("pool1_size2 shape: ", pool1_size2.get_shape())
+    pool1_size2_flat = tf.reshape(pool1_size2, [-1, 200])
+    print ("pool1_size2_flat: ", pool1_size2_flat.get_shape())
+
+    conv1_size3 = tf.layers.conv2d(inputs=X_4d, filters=200, kernel_size=[3, 302], activation=tf.nn.relu)
+    pool1_size3 = tf.layers.max_pooling2d(inputs=conv1_size3, pool_size=[max_sen_len - 2, 1], strides=[max_sen_len - 2, 1])
+    pool1_size3_flat = tf.reshape(pool1_size3, [-1, 200])
+    print ("pool1_size3_flat: ", pool1_size3_flat.get_shape())
+
+    conv1_size4 = tf.layers.conv2d(inputs=X_4d, filters=200, kernel_size=[4, 302], activation=tf.nn.relu)
+    pool1_size4 = tf.layers.max_pooling2d(inputs=conv1_size3, pool_size=[max_sen_len - 3, 1], strides=[max_sen_len - 3, 1])
+    pool1_size4_flat = tf.reshape(pool1_size4, [-1, 200])
+
+    conv1_size5 = tf.layers.conv2d(inputs=X_4d, filters=200, kernel_size=[5, 302], activation=tf.nn.relu)
+    pool1_size5 = tf.layers.max_pooling2d(inputs=conv1_size3, pool_size=[max_sen_len - 4, 1], strides=[max_sen_len - 4, 1])
+    pool1_size5_flat = tf.reshape(pool1_size5, [-1, 200])
+    
+
+    pool1_flat = tf.concat([pool1_size2_flat, pool1_size3_flat, pool1_size4_flat, pool1_size5_flat], 1)
+    print("pool1_flat shape: ", pool1_flat.get_shape())
     # Do not use hidden layer in this project
     # ffn = tf.layers.dense(inputs=pool1_flat, units=hidden_size, activation=tf.nn.relu, kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=decay))
 
@@ -88,15 +109,15 @@ class ConvNet(object):
   def get_batch(self, data_set, s, e):
 
     sent_embed = data_set[0]
-    pos_embed_first_entity = data_set[1]
-    pos_embed_second_entity = data_set[2]
-    event_one_hot = data_set[3]
-    timex3_one_hot = data_set[4]
-    source_one_hot = data_set[5]
-    target_one_hot = data_set[6]
+    # pos_embed_first_entity = data_set[1]
+    # pos_embed_second_entity = data_set[2]
+    event_one_hot = data_set[1]
+    timex3_one_hot = data_set[2]
+    source_one_hot = data_set[3]
+    target_one_hot = data_set[4]
     # boolean_features = data_set[7]
     # label = data_set[8]
-    label = data_set[7]
+    label = data_set[5]
     # label = data_set[5]
     
     # positions of each label in the batch data
@@ -130,10 +151,15 @@ class ConvNet(object):
     #   timex3_one_hot[s:e], source_one_hot[s:e], target_one_hot[s:e], boolean_features[s:e], label[s:e], \
     #   label0_pos, label1_pos, label2_pos, label3_pos, label4_pos, label5_pos, label6_pos, label7_pos, label8_pos, label9_pos
 
-    return sent_embed[s:e], pos_embed_first_entity[s:e], pos_embed_second_entity[s:e], event_one_hot[s:e], \
+    # return sent_embed[s:e], pos_embed_first_entity[s:e], pos_embed_second_entity[s:e], event_one_hot[s:e], \
+    #   timex3_one_hot[s:e], source_one_hot[s:e], target_one_hot[s:e], label[s:e], \
+    #   label0_pos, label1_pos, label2_pos, label3_pos, label4_pos, label5_pos, label6_pos, label7_pos, label8_pos, label9_pos
+
+    return sent_embed[s:e], event_one_hot[s:e], \
       timex3_one_hot[s:e], source_one_hot[s:e], target_one_hot[s:e], label[s:e], \
       label0_pos, label1_pos, label2_pos, label3_pos, label4_pos, label5_pos, label6_pos, label7_pos, label8_pos, label9_pos
 
+  
     # return sent_embed[s:e], pos_embed_first_entity[s:e], pos_embed_second_entity[s:e], event_one_hot[s:e], \
     #   timex3_one_hot[s:e], label[s:e], \
     #   label0_pos, label1_pos, label2_pos, label3_pos, label4_pos, label5_pos, label6_pos, label7_pos, label8_pos, label9_pos
@@ -294,13 +320,15 @@ class ConvNet(object):
       with tf.name_scope('input'):
 
         sent_embed = tf.placeholder(tf.int32, [None, max_sent_len])
-        pos_embed_first_entity = tf.placeholder(tf.int32, [None, max_sent_len])
-        pos_embed_second_entity = tf.placeholder(tf.int32, [None, max_sent_len])
+        # pos_embed_first_entity = tf.placeholder(tf.int32, [None, max_sent_len])
+        # pos_embed_second_entity = tf.placeholder(tf.int32, [None, max_sent_len])
         event_one_hot = tf.placeholder(tf.int32, [None, max_sent_len])
         timex3_one_hot = tf.placeholder(tf.int32, [None, max_sent_len])
         source_one_hot = tf.placeholder(tf.int32, [None, max_sent_len])
         target_one_hot = tf.placeholder(tf.int32, [None, max_sent_len])
-        boolean_features = tf.placeholder(tf.int32, [None, max_sent_len])
+        # boolean_features = tf.placeholder(tf.int32, [None, max_sent_len])
+        is_training = tf.placeholder(tf.bool)
+        
         label = tf.placeholder(tf.int32, [None]) 
 
         label0_pos = tf.placeholder(tf.int32, [None])
@@ -322,8 +350,8 @@ class ConvNet(object):
       word_embedding = tf.Variable(tf.random_uniform(vectors.shape, minval=-0.05, maxval=0.05))
 
       
-      pos_embedding = tf.get_variable(name="pos_embedding", shape=positions.shape,
-                                      initializer=tf.constant_initializer(positions), trainable=False)
+      # pos_embedding = tf.get_variable(name="pos_embedding", shape=positions.shape,
+      #                                 initializer=tf.constant_initializer(positions), trainable=False)
       # embedding of out of vocabulary words
       # oov = tf.Variable(tf.random_uniform([1, vectors.shape[1]], minval=-0.05, maxval=0.05))
 
@@ -338,26 +366,24 @@ class ConvNet(object):
 
       print ("rep shape: ", rep.get_shape())
       
-      pos_source_bitmap = tf.nn.embedding_lookup(params=pos_embedding, ids=pos_embed_first_entity)
-      pos_target_bitmap = tf.nn.embedding_lookup(params=pos_embedding, ids=pos_embed_second_entity)
+      # pos_source_bitmap = tf.nn.embedding_lookup(params=pos_embedding, ids=pos_embed_first_entity)
+      # pos_target_bitmap = tf.nn.embedding_lookup(params=pos_embedding, ids=pos_embed_second_entity)
 
-      print ("pos_source_bitmap shape: ", pos_source_bitmap.get_shape())
+      # print ("pos_source_bitmap shape: ", pos_source_bitmap.get_shape())
       
-      w = tf.Variable(tf.random_uniform([batch_size, 15, 5], minval=-0.05, maxval=0.05))
+      # w = tf.Variable(tf.random_uniform([batch_size, 15, 5], minval=-0.05, maxval=0.05))
       
-      pos_source_rep = tf.matmul(pos_source_bitmap, w)
-      pos_target_rep = tf.matmul(pos_source_bitmap, w)
+      # pos_source_rep = tf.matmul(pos_source_bitmap, w)
+      # pos_target_rep = tf.matmul(pos_source_bitmap, w)
 
-      print ("pos source rep: ", pos_source_rep.get_shape())
+      # print ("pos source rep: ", pos_source_rep.get_shape())
 
-      rep = tf.concat([rep, pos_source_rep, pos_target_rep], axis=2)
+      # rep = tf.concat([rep, pos_source_rep, pos_target_rep], axis=2)
 
-      print ("rep shape: ", rep.get_shape())
+      # print ("rep shape: ", rep.get_shape())
       
       # add boolean features, which indicate whether source comes before or after target.
       # rep = tf.concat([rep, tf.to_float(tf.expand_dims(boolean_features, 2))], 2)
-
-      print ("new rep shape: ", rep.get_shape())
 
       
       # model 1: base line
@@ -365,14 +391,19 @@ class ConvNet(object):
         features = self.model_1(rep, event_one_hot, timex3_one_hot, source_one_hot, target_one_hot, hidden_size, max_sent_len, decay)
       # model 2: add one convolutional layer
       elif self.mode == 2:
-        features = self.model_2(rep, event_one_hot, timex3_one_hot, source_one_hot, target_one_hot, hidden_size, max_sent_len, decay)
+        features = self.model_2(rep, event_one_hot, timex3_one_hot, hidden_size, max_sent_len, decay)
 
       # ======================================================================
       # define softmax layer
       # ----------------- YOUR CODE HERE ----------------------
       #
-      
-      logits = tf.layers.dense(features, units=class_num)
+
+      ###################################
+      # add a dropout layer
+      dropout = tf.layers.dropout(inputs=features, rate=0.25, training=is_training)
+      dense = tf.layers.dense(inputs=dropout, units=300, activation=tf.nn.relu)
+      logits = tf.layers.dense(inputs=dense, units=class_num)
+      # logits = tf.layers.dense(features, units=class_num)      
       # logits = tf.layers.dense(features, units=class_num, kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=decay))
 
       # print ("show all trainable variables...")
@@ -386,7 +417,11 @@ class ConvNet(object):
       # ----------------- YOUR CODE HERE ----------------------
       #
 
-      loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label, logits=logits) + decay * tf.nn.l2_loss(dense_kernel))
+      # loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label, logits=logits) + decay * tf.nn.l2_loss(dense_kernel))
+      ############################################################
+      # Lin's paper does not mention the usage of regularzation
+      loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label, logits=logits))
+
       
       # cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label, logits=logits)
       # loss0 = tf.reduce_sum(tf.gather(cross_entropy, label0_pos)) / label0_count
@@ -409,8 +444,9 @@ class ConvNet(object):
       # define training operation
       #
       # train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
-      train_op = tf.train.AdadeltaOptimizer(learning_rate=1.0).minimize(loss)
-
+      # train_op = tf.train.AdadeltaOptimizer(learning_rate=1.0).minimize(loss)
+      train_op = tf.train.RMSPropOptimizer(learning_rate).minimize(loss)
+      
       
       # ======================================================================
       # define accuracy operation
@@ -476,12 +512,19 @@ class ConvNet(object):
             #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
             # = self.get_batch(train_set, s, e)
 
-            (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
+            # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
+            #  batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label,
+            #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+            #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+            # = self.get_batch(train_set, s, e)
+
+            (batch_sent_embed, batch_event_one_hot,
              batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label,
              batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
              batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
             = self.get_batch(train_set, s, e)
 
+            
             # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
             #  batch_timex3_one_hot, batch_label,
             #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
@@ -503,15 +546,13 @@ class ConvNet(object):
             _, loss_value, confusion_matrix_value \
             = sess.run([train_op, loss, confusion_matrix], \
                        feed_dict={sent_embed: batch_sent_embed,
-                                  pos_embed_first_entity: batch_pos_source,
-                                  pos_embed_second_entity: batch_pos_target,
                                   event_one_hot: batch_event_one_hot,
                                   timex3_one_hot: batch_timex3_one_hot,
                                   source_one_hot: batch_source_one_hot,
                                   target_one_hot: batch_target_one_hot,
                                   # boolean_features : batch_boolean_features,
+                                  is_training: True,
                                   label: batch_label,
-                                  label0_pos: batch_label0_pos,
                                   label1_pos: batch_label1_pos,
                                   label2_pos: batch_label2_pos,
                                   label3_pos: batch_label3_pos,
@@ -562,12 +603,19 @@ class ConvNet(object):
               #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
               # = self.get_batch(train_set, s, e)
 
-              (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
+              # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
+              #  batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label,
+              #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+              #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+              # = self.get_batch(train_set, s, e)
+
+              (batch_sent_embed, batch_event_one_hot,
                batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label,
                batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
                batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
               = self.get_batch(train_set, s, e)
 
+              
               # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
               #  batch_timex3_one_hot, batch_label,
               #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
@@ -578,13 +626,12 @@ class ConvNet(object):
               pred_value, correct_num_value, confusion_matrix_value \
               = sess.run([pred, correct_num, confusion_matrix], \
                          feed_dict={sent_embed: batch_sent_embed,
-                                    pos_embed_first_entity: batch_pos_source,
-                                    pos_embed_second_entity: batch_pos_target,
                                     event_one_hot: batch_event_one_hot,
                                     timex3_one_hot: batch_timex3_one_hot,
                                     source_one_hot: batch_source_one_hot,
                                     target_one_hot: batch_target_one_hot,
                                     # boolean_features : batch_boolean_features,
+                                    is_training: False,
                                     label: batch_label,
                                     label0_pos: batch_label0_pos,
                                     label1_pos: batch_label1_pos,
@@ -639,12 +686,19 @@ class ConvNet(object):
               #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
               # = self.get_batch(test_set, s, e)              
 
-              (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
+              # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
+              #  batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label,
+              #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+              #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+              # = self.get_batch(test_set, s, e)              
+
+              (batch_sent_embed, batch_event_one_hot,
                batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label,
                batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
                batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
               = self.get_batch(test_set, s, e)              
 
+              
               # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
               #  batch_timex3_one_hot, batch_label,
               #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
@@ -654,13 +708,12 @@ class ConvNet(object):
               
               pred_value = sess.run([pred], \
                                     feed_dict={sent_embed: batch_sent_embed,
-                                               pos_embed_first_entity: batch_pos_source,
-                                               pos_embed_second_entity: batch_pos_target,
                                                event_one_hot: batch_event_one_hot,
                                                timex3_one_hot: batch_timex3_one_hot,
                                                source_one_hot: batch_source_one_hot,
                                                target_one_hot: batch_target_one_hot,
                                                # boolean_features : batch_boolean_features,
+                                               is_training: False,
                                                label: batch_label,
                                                label0_pos: batch_label0_pos,
                                                label1_pos: batch_label1_pos,
@@ -723,12 +776,19 @@ class ConvNet(object):
               #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
               # = self.get_batch(closure_test_set, s, e)              
 
-              (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
+              # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
+              #  batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label,
+              #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+              #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+              # = self.get_batch(closure_test_set, s, e)              
+
+              (batch_sent_embed, batch_event_one_hot,
                batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label,
                batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
                batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
               = self.get_batch(closure_test_set, s, e)              
 
+              
               # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
               #  batch_timex3_one_hot, batch_label,
               #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
@@ -739,13 +799,12 @@ class ConvNet(object):
               correct, confusion_matrix_value \
               = sess.run([correct_num, confusion_matrix], \
                          feed_dict={sent_embed: batch_sent_embed,
-                                    pos_embed_first_entity: batch_pos_source,
-                                    pos_embed_second_entity: batch_pos_target,
                                     event_one_hot: batch_event_one_hot,
                                     timex3_one_hot: batch_timex3_one_hot,
                                     source_one_hot: batch_source_one_hot,
                                     target_one_hot: batch_target_one_hot,
                                     # boolean_features : batch_boolean_features,
+                                    is_training: False,
                                     label: batch_label,
                                     label0_pos: batch_label0_pos,
                                     label1_pos: batch_label1_pos,
@@ -806,12 +865,19 @@ class ConvNet(object):
           #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
           # = self.get_batch(test_set, s, e)          
 
-          (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot, \
+          # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot, \
+          #  batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label, \
+          #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+          #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+          # = self.get_batch(test_set, s, e)          
+
+          (batch_sent_embed, batch_event_one_hot, \
            batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label, \
            batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
            batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
           = self.get_batch(test_set, s, e)          
 
+          
           # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot, \
           #  batch_timex3_one_hot, batch_label, \
           #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
@@ -822,13 +888,12 @@ class ConvNet(object):
           correct, confusion_matrix_value, pred_value \
           = sess.run([correct_num, confusion_matrix, pred], \
                      feed_dict={sent_embed: batch_sent_embed,
-                                pos_embed_first_entity: batch_pos_source,
-                                pos_embed_second_entity: batch_pos_target,
                                 event_one_hot: batch_event_one_hot,
                                 timex3_one_hot: batch_timex3_one_hot,
                                 source_one_hot: batch_source_one_hot,
                                 target_one_hot: batch_target_one_hot,
                                 # boolean_features : batch_boolean_features,
+                                is_training: False,
                                 label: batch_label,
                                 label0_pos: batch_label0_pos,
                                 label1_pos: batch_label1_pos,
