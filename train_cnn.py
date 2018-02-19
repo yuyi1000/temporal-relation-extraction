@@ -746,8 +746,8 @@ class ConvNet(object):
             print (total_confusion_matrix_value2)
             
             # recall2_value = np.sum(total_confusion_matrix_value2[3:5, 3:5]) / np.sum(total_confusion_matrix_value2[3:5, :])
-            recall2_value = np.sum(total_confusion_matrix_value2[[3, 4], [3, 4]]) / np.sum(total_confusion_matrix_value2[3:5, :])
-            print ("recall2: ", recall2_value)
+            # recall2_value = np.sum(total_confusion_matrix_value2[[3, 4], [3, 4]]) / np.sum(total_confusion_matrix_value2[3:5, :])
+            # print ("recall2: ", recall2_value)
 
             
           ###############################################################################
@@ -827,11 +827,11 @@ class ConvNet(object):
             # precision2_value = total_confusion_matrix_value[2, 2] / sum(total_confusion_matrix_value[:, 2])
             # recall2_value = total_confusion_matrix_value[2, 2] / sum(total_confusion_matrix_value[2, :])
             # precision2_value = np.sum(total_confusion_matrix_value[3:5, 3:5]) / np.sum(total_confusion_matrix_value[:, 3:5])
-            precision2_value = np.sum(total_confusion_matrix_value[[3, 4], [3, 4]]) / np.sum(total_confusion_matrix_value[:, 3:5])
-            print ("precision2: ", precision2_value)
+            # precision2_value = np.sum(total_confusion_matrix_value[[3, 4], [3, 4]]) / np.sum(total_confusion_matrix_value[:, 3:5])
+            # print ("precision2: ", precision2_value)
             
-            f1_value = 2 * precision2_value * recall2_value / (precision2_value + recall2_value)
-            print ("f1 measure: ", f1_value)     
+            # f1_value = 2 * precision2_value * recall2_value / (precision2_value + recall2_value)
+            # print ("f1 measure: ", f1_value)     
             
         save_path = saver.save(sess, model_path)
         print ("Model saved in file: %s" % save_path)
@@ -939,12 +939,12 @@ class ConvNet(object):
 
         # precision2_value = total_confusion_matrix_value[2, 2] / sum(total_confusion_matrix_value[:, 2])
         # recall2_value = total_confusion_matrix_value[2, 2] / sum(total_confusion_matrix_value[2, :])
-        precision2_value = np.sum(total_confusion_matrix_value[3:5, 3:5]) / np.sum(total_confusion_matrix_value[:, 3:5])
-        recall2_value = np.sum(total_confusion_matrix_value[3:5, 3:5]) / np.sum(total_confusion_matrix_value[3:5, :])
-        f1_value = 2 * precision2_value * recall2_value / (precision2_value + recall2_value)
-        print ("precision2: ", precision2_value)
-        print ("recall2: ", recall2_value)
-        print ("f1 measure: ", f1_value)
+        # precision2_value = np.sum(total_confusion_matrix_value[3:5, 3:5]) / np.sum(total_confusion_matrix_value[:, 3:5])
+        # recall2_value = np.sum(total_confusion_matrix_value[3:5, 3:5]) / np.sum(total_confusion_matrix_value[3:5, :])
+        # f1_value = 2 * precision2_value * recall2_value / (precision2_value + recall2_value)
+        # print ("precision2: ", precision2_value)
+        # print ("recall2: ", recall2_value)
+        # print ("f1 measure: ", f1_value)
         
 
         # return total_correct / test_size

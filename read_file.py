@@ -4,6 +4,7 @@ from nltk import tokenize
 from nltk.tokenize.punkt import PunktSentenceTokenizer
 from struct import unpack
 from operator import itemgetter
+from copy import deepcopy
 
 from compares import within, greater, same_length, max_length
 
@@ -53,17 +54,27 @@ class Entity(object):
 
 
 class TLINK(object):
-    def __init__(self, source_b, source_e, target_b, target_e, type_):
+    '''
+    param event_vs_event: shows if both source and target are event
+    param inverse: For event_vs_event, inverse shows if source comes
+    after target. for event_vs_time, inverse shows if time entity RELATIONS
+    event entity.
+    '''
+    def __init__(self, source_b, source_e, target_b, target_e, type_, event_vs_event=True, inverse=False):
         self.source_b = source_b
         self.source_e = source_e
         self.target_b = target_b
         self.target_e = target_e
-        self.type_ = type_
+        self.type_ = type_.lower()
+        self.event_vs_event = event_vs_event
+        self.inverse = inverse
 
     def displayTLINK(self):
         print ("source begin: ", self.source_b, ", source end: ", self.source_e)
         print ("target begin: ", self.target_b, ", target end: ", self.target_e)
         print ("type: ", self.type_)
+        print ("event vs event: ", event_vs_event)
+        print ("inverse: ", inverse)
 
 # TLINK2 reflects the newest structure we have been used
 # We no longer use the notation of source and target
@@ -272,7 +283,7 @@ class WordEmbedding2:
 #
 
 class THYME(object):
-    def __init__(self, embedding, thyme_data_path, thyme_anno_path):
+    def __init__(self, embedding, thyme_data_path, thyme_anno_path, full_dataset=False):
 
         train_data_files = self.collect_id_files(thyme_data_path + '/train/')
 
@@ -335,24 +346,38 @@ class THYME(object):
             self.id_to_word = embedding.id_to_word
             self.vectors = embedding.vectors
             self.max_sent_len = 0
-            self.label_dict = {'NONE' : 0, 'BEFORE_LR' : 1, 'BEFORE_RL' : 2, 'CONTAINS_LR' : 3, 'CONTAINS_RL' : 4, 'OVERLAP' : 5, 'BEGINS-ON_LR' : 6,
-                               'BEGINS-ON_RL' : 7, 'ENDS-ON_LR' : 8, 'ENDS-ON_RL' : 9}
+            # self.label_dict = {'NONE' : 0, 'BEFORE_LR' : 1, 'BEFORE_RL' : 2, 'CONTAINS_LR' : 3, 'CONTAINS_RL' : 4, 'OVERLAP' : 5, 'BEGINS-ON_LR' : 6,
+            #                    'BEGINS-ON_RL' : 7, 'ENDS-ON_LR' : 8, 'ENDS-ON_RL' : 9}
 
+            #################################################
+            # use only three labels may improve final result
+            # self.label_dict = {'NONE' : 0, 'CONTAINS_LR' : 1, 'CONTAINS_RL' : 2}
+            self.label_dict = {'none' : 0, 'contains' : 1, 'contains_1' : 2}
+            
             ###############################
             # Full dataset
-            self.train_set = self.load_data(pattern, nlp, thyme_data_path + '/train/', thyme_anno_path + '/train/', train_data_files, train_anno_files, event_vs_event=False, event_vs_time=True)
-            self.dev_set = self.load_data(pattern, nlp, thyme_data_path + '/dev/', thyme_anno_path + '/dev/', dev_data_files, dev_anno_files, event_vs_event=False, event_vs_time=True)
-            self.test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files, test_anno_files, event_vs_event=False, event_vs_time=True)
-            self.closure_test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
-                                                   test_anno_files, event_vs_event=False, event_vs_time=True, closure_test_set=True)
+
+            if full_dataset:
+                self.train_set = self.load_data(pattern, nlp, thyme_data_path + '/train/', thyme_anno_path + '/train/', train_data_files,
+                                                train_anno_files, event_vs_event=False, event_vs_time=True)
+                self.dev_set = self.load_data(pattern, nlp, thyme_data_path + '/dev/', thyme_anno_path + '/dev/',
+                                              dev_data_files, dev_anno_files, event_vs_event=False, event_vs_time=True)
+                self.test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
+                                               test_anno_files, event_vs_event=False, event_vs_time=True)
+                self.closure_test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
+                                                       test_anno_files, event_vs_event=False, event_vs_time=True, closure_test_set=True)
 
             ################################
             # Smaller dataset for debugging
-            # self.train_set = self.load_data(pattern, nlp, thyme_data_path + '/train/', thyme_anno_path + '/train/', train_data_files, train_anno_files_test, event_vs_event=False, event_vs_time=True)
-            # self.dev_set = self.load_data(pattern, nlp, thyme_data_path + '/dev/', thyme_anno_path + '/dev/', dev_data_files, dev_anno_files_test, event_vs_event=False, event_vs_time=True)
-            # self.test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files, test_anno_files_test, event_vs_event=False, event_vs_time=True)
-            # self.closure_test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/',
-            #                                        test_data_files, test_anno_files_test, event_vs_event=False, event_vs_time=True, closure_test_set=True)
+            else:
+                self.train_set = self.load_data(pattern, nlp, thyme_data_path + '/train/', thyme_anno_path + '/train/',
+                                                train_data_files, train_anno_files_test, event_vs_event=False, event_vs_time=True)
+                self.dev_set = self.load_data(pattern, nlp, thyme_data_path + '/dev/', thyme_anno_path + '/dev/', dev_data_files,
+                                              dev_anno_files_test, event_vs_event=False, event_vs_time=True)
+                self.test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
+                                               test_anno_files_test, event_vs_event=False, event_vs_time=True)
+                self.closure_test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/',
+                                                       test_data_files, test_anno_files_test, event_vs_event=False, event_vs_time=True, closure_test_set=True)
             
 
     def find_entity(self, entity_list, id_):
@@ -427,10 +452,12 @@ class THYME(object):
 
                 if event_vs_event:
                     if source_type == 'EVENT' and target_type == "EVENT":
-                        tlink_list.append(TLINK(source_b, source_e, target_b, target_e, Type_))
+                        tlink_list.append(TLINK(source_b, source_e, target_b, target_e, Type_, inverse=(int(source_b) > int(target_b))))
                 if event_vs_time:
-                    if (source_type == 'EVENT' and target_type == 'TIMEX3') or (source_type == 'TIMEX3' and target_type == 'EVENT'):
-                        tlink_list.append(TLINK(source_b, source_e, target_b, target_e, Type_))
+                    if (source_type == 'EVENT' and target_type == 'TIMEX3'):
+                        tlink_list.append(TLINK(source_b, source_e, target_b, target_e, Type_, event_vs_event=False, inverse=True))
+                    if (source_type == 'TIMEX3' and target_type == 'EVENT'):
+                        tlink_list.append(TLINK(source_b, source_e, target_b, target_e, Type_, event_vs_event=False, inverse=False))
                 # tlink_list.append(TLINK(source_b, source_e, target_b, target_e, Type_))
 
         event_list.sort()
@@ -653,15 +680,22 @@ class THYME(object):
             boolean_feature = 1 if tlink.source_b < tlink.target_b else -1
             boolean_features = [boolean_feature] * len(sent_token)
 
-            if tlink.type_ == "OVERLAP" or tlink.type_ == "NONE":
-                label = self.label_dict[tlink.type_]
-            else:
-                suffix = "_LR" if boolean_feature == 1 else "_RL"
+            # if tlink.type_ == "OVERLAP" or tlink.type_ == "NONE":
+            #     label = self.label_dict[tlink.type_]
+            # else:
+            #     suffix = "_LR" if boolean_feature == 1 else "_RL"
+            #     label = self.label_dict[tlink.type_ + suffix]
+
+            if tlink.type_ == "none":
+                label = self.label_dict[tlink.type_.lower()]
+            elif tlink.type_ == "contains":
+                suffix = "_1" if tlink.inverse else ""
                 label = self.label_dict[tlink.type_ + suffix]
-                
-            # filter some tlink structs
-            if (sent_idx != -1 and sum(source_one_hot) != 0 and sum(target_one_hot) != 0):
+            else:
+                label = -1
             
+            # filter some tlink structs
+            if (sent_idx != -1 and sum(source_one_hot) != 0 and sum(target_one_hot) != 0 and label != -1):
                 tlink_struct_list.append(((tlink.source_b, tlink.source_e), (tlink.target_b, tlink.target_e), source_one_hot,
                                           target_one_hot, boolean_features, sent_idx, label))
 
@@ -1065,9 +1099,40 @@ class THYME(object):
                 pos_embed.append(min(7, i - hi))
         return [(i + 8) for i in pos_embed]
                 
+    def get_two_entities_pos(self, source_bitmap, target_bitmap):
+        pos1_b = source_bitmap.index(1)
+        pos1_e = len(source_bitmap) - 1 - source_bitmap[::-1].index(1)
+        pos2_b = target_bitmap.index(1)
+        pos2_e = len(target_bitmap) - 1 - target_bitmap[::-1].index(1)
+        if pos2_b < pos1_b:
+            pos1_b, pos1_e, pos2_b, pos2_e = pos2_b, pos2_e, pos1_b, pos1_e
+        return pos1_b, pos1_e, pos2_b, pos2_e
 
+
+    # add additional 0 for relevant xml tags in the bitmap (e.g. timex3_bitmap, event_bitmap)
+    def get_new_bitmap_with_xml_tag(self, source_bitmap, target_bitmap, bitmap):
+        new_bitmap = deepcopy(bitmap)
+        pos1_b, pos1_e, pos2_b, pos2_e = self.get_two_entities_pos(source_bitmap, target_bitmap)
+        new_bitmap.insert(pos1_b, 0)
+        new_bitmap.insert(pos1_e + 2, 0)
+        new_bitmap.insert(pos2_b + 2, 0)
+        new_bitmap.insert(pos2_e + 4, 0)
+        return new_bitmap
+    
     # add xml tag like <e>, </e> around the source or target event and <t>, </t> around timex3.
     def get_sent_embed_with_xml_tag(self, sent_embed, source_bitmap, target_bitmap, event_bitmap, timex3_bitmap):
+
+
+        new_sent_embed = deepcopy(sent_embed)
+        # pos1_b = source_bitmap.index(1)
+        # pos1_e = len(source_bitmap) - 1 - source_bitmap[::-1].index(1)
+        # pos2_b = target_bitmap.index(1)
+        # pos2_e = len(target_bitmap) - 1 - target_bitmap[::-1].index(1)
+        # if pos2_b < pos1_b:
+        #     pos1_b, pos1_e, pos2_b, pos2_e = pos2_b, pos2_e, pos1_b, pos1_e
+
+        pos1_b, pos1_e, pos2_b, pos2_e = self.get_two_entities_pos(source_bitmap, target_bitmap)
+
         pos1 = source_bitmap.index(1)
         pos2 = target_bitmap.index(1)
         if pos2 < pos1:
@@ -1079,27 +1144,117 @@ class THYME(object):
             if timex3_bitmap[pos] == 1:
                 timex3_count += 1
         if event_count == 1:
-            if event_bitmap[pos1] == 1:
-                sent_embed.insert(pos1, self.word_to_id["<e>"])
-                sent_embed.insert(pos1 + 2, self.word_to_id["</e>"])
-                sent_embed.insert(pos2 + 2, self.word_to_id["<t>"])
-                sent_embed.insert(pos2 + 4, self.word_to_id["</t>"])
+            if event_bitmap[pos1_b] == 1:
+                new_sent_embed.insert(pos1_b, self.word_to_id["<e>"])
+                new_sent_embed.insert(pos1_e + 2, self.word_to_id["</e>"])
+                new_sent_embed.insert(pos2_b + 2, self.word_to_id["<t>"])
+                new_sent_embed.insert(pos2_e + 4, self.word_to_id["</t>"])
             else:
-                sent_embed.insert(pos1, self.word_to_id["<t>"])
-                sent_embed.insert(pos1 + 2, self.word_to_id["</t>"])
-                sent_embed.insert(pos2 + 2, self.word_to_id["<e>"])
-                sent_embed.insert(pos2 + 4, self.word_to_id["</e>"])                
+                new_sent_embed.insert(pos1_b, self.word_to_id["<t>"])
+                new_sent_embed.insert(pos1_e + 2, self.word_to_id["</t>"])
+                new_sent_embed.insert(pos2_b + 2, self.word_to_id["<e>"])
+                new_sent_embed.insert(pos2_e + 4, self.word_to_id["</e>"])                
         else:
             if event_bitmap[pos1] == 1:
-                sent_embed.insert(pos1, self.word_to_id["<e1>"])
-                sent_embed.insert(pos1 + 2, self.word_to_id["</e1>"])
-                sent_embed.insert(pos2 + 2, self.word_to_id["<e2>"])
-                sent_embed.insert(pos2 + 4, self.word_to_id["</e2>"])
+                new_sent_embed.insert(pos1_b, self.word_to_id["<e1>"])
+                new_sent_embed.insert(pos1_e + 2, self.word_to_id["</e1>"])
+                new_sent_embed.insert(pos2_b + 2, self.word_to_id["<e2>"])
+                new_sent_embed.insert(pos2_e + 4, self.word_to_id["</e2>"])
             else:
-                sent_embed.insert(pos1, self.word_to_id["<t1>"])
-                sent_embed.insert(pos1 + 2, self.word_to_id["</t1>"])
-                sent_embed.insert(pos2 + 2, self.word_to_id["<t2>"])
-                sent_embed.insert(pos2 + 4, self.word_to_id["</t2>"])
+                new_sent_embed.insert(pos1_b, self.word_to_id["<t1>"])
+                new_sent_embed.insert(pos1_e + 2, self.word_to_id["</t1>"])
+                new_sent_embed.insert(pos2_b + 2, self.word_to_id["<t2>"])
+                new_sent_embed.insert(pos2_e + 4, self.word_to_id["</t2>"])
+        return new_sent_embed
+
+
+    # add xml tag like <e>, </e> around the source or target event and <t>, </t> around timex3
+    # and return xml tags augmented tokens
+    def get_sent_token_with_xml_tag(self, sent_token, source_bitmap, target_bitmap, event_bitmap, timex3_bitmap):
+        # print("timex3 bitmap", timex3_bitmap)
+        # print("source bitmap: ", source_bitmap)
+        # print("target bitmap: ", target_bitmap)
+        new_sent_token = deepcopy(sent_token)
+        pos1_b = source_bitmap.index(1)
+        pos1_e = len(source_bitmap) - 1 - source_bitmap[::-1].index(1)
+        pos2_b = target_bitmap.index(1)
+        pos2_e = len(target_bitmap) - 1 - target_bitmap[::-1].index(1)
+        if pos2_b < pos1_b:
+            pos1_b, pos1_e, pos2_b, pos2_e = pos2_b, pos2_e, pos1_b, pos1_e
+        event_count, timex3_count = 0, 0
+        for pos in [pos1_b, pos2_b]:
+            if event_bitmap[pos] == 1:
+                event_count += 1
+            if timex3_bitmap[pos] == 1:
+                timex3_count += 1
+        if event_count == 1:
+            if event_bitmap[pos1_b] == 1:
+                new_sent_token.insert(pos1_b, "<e>")
+                new_sent_token.insert(pos1_e + 2, "</e>")
+                new_sent_token.insert(pos2_b + 2, "<t>")
+                new_sent_token.insert(pos2_e + 4, "</t>")
+            else:
+                new_sent_token.insert(pos1_b, "<t>")
+                new_sent_token.insert(pos1_e + 2, "</t>")
+                new_sent_token.insert(pos2_b + 2, "<e>")
+                new_sent_token.insert(pos2_e + 4, "</e>")                
+        else:
+            if event_bitmap[pos1_b] == 1:
+                new_sent_token.insert(pos1_b, "<e1>")
+                new_sent_token.insert(pos1_e + 2, "</e1>")
+                new_sent_token.insert(pos2_b + 2, "<e2>")
+                new_sent_token.insert(pos2_e + 4, "</e2>")
+            else:
+                new_sent_token.insert(pos1_b, "<t1>")
+                new_sent_token.insert(pos1_e + 2, "</t1>")
+                new_sent_token.insert(pos2_b + 2, "<t2>")
+                new_sent_token.insert(pos2_e + 4, "</t2>")
+        return new_sent_token
+
+
+
+    def get_output_buffer(self, file_content, sent_token, label):
+        buffer_ = ""
+        if label == 0:
+            buffer_ += 'none | '
+        elif label == 1:
+            buffer_ += 'contains | '
+        elif label == 2:
+            buffer_ += 'contains_1 | '
+        for token in sent_token:
+            if type(token) is str:
+                buffer_ += (token + ' ')
+            else:
+                token_b, token_e = token
+                buffer_ += (file_content[token_b:token_e] + ' ')
+        buffer_ += '\n'
+        return buffer_
+
+
+    def get_output_file_name(self, data_path, closure_test_set):
+        end = data_path.rfind('/')
+        begin = data_path.rfind('/', 0, end)
+        file_name = data_path[begin+1:end]
+        if closure_test_set:
+            file_name += '_closure'
+        return file_name + '.txt'
+
+
+    def check_collect_anno(self, tlink_list, sent_token_list, file_content):
+        result = ""
+        for tlink in tlink_list:
+            tlink_min = min(tlink.source_b, tlink.source_e, tlink.target_b, tlink.target_e)
+            tlink_max = max(tlink.source_b, tlink.source_e, tlink.target_b, tlink.target_e)
+            sent_idx = self.get_number_of_sent((tlink_min, tlink_max), sent_token_list)
+            sent_token = sent_token_list[sent_idx]
+            for token in sent_token:
+                token_b, token_e = token
+                result += file_content[token_b:token_e] + ' '
+            result += '\nSource: ' + file_content[tlink.source_b:tlink.source_e]
+            result += '\nTarget: ' + file_content[tlink.target_b:tlink.target_e]
+            result += '\nType: ' + tlink.type_
+            result += '\n------------------------------------------------------\n'
+        print (result)
     
         
     # sentence pairs and their labels
@@ -1118,13 +1273,20 @@ class THYME(object):
 
         ## pattern is used to filter out unwanted sentences.
         # pattern = '\[meta|\[start section|\[end section|^\n$'
+
+        output_buffer = ""
         
         for anno_file in anno_files:
 
             ##########################################
             # loading data from data file
+            # one_file is the name of content file
+            # anno_file is the name of annotation file
             one_file = anno_file[:anno_file.find('.')]
 
+            file_content = open(join(data_path, one_file)).read()
+
+           
 
             # sent_token_list is a list of sentence with its character offset for each token.
             # E.g. "Hello world. See you." will be represented as
@@ -1138,6 +1300,7 @@ class THYME(object):
             sent_embed_list = []
             
             print ("one file: ", one_file)
+            # print ("line of output buffer", output_buffer.count('\n'))
             
             # sent_list = self.collect_sent(data_path + one_file)
             
@@ -1180,6 +1343,9 @@ class THYME(object):
             print ("anno file: ", anno_file)
             
             event_list, timex3_list, tlink_list = self.collect_anno(anno_path + anno_file, event_vs_event, event_vs_time)
+            # self.check_collect_anno(tlink_list, sent_token_list, file_content)
+            
+            
             if closure_test_set:
                 print ("this is closure test set.")
                 self.add_closure_to_tlink_list(tlink_list)
@@ -1276,6 +1442,8 @@ class THYME(object):
                 event_one_hot_r = event_token_one_hot_list[index]
                 timex3_one_hot_r = timex3_token_one_hot_list[index]
 
+                sent_token_r = sent_token_list[index]
+
                 # print ("index: ", index)
                 # print ("label: ", label_r)
                 # print ("source one hot: ", source_one_hot_r)
@@ -1287,23 +1455,39 @@ class THYME(object):
                 
                 ###################################################
                 # add xml tag to sentence embedding
-                self.get_sent_embed_with_xml_tag(sent_embed_r, source_one_hot_r, target_one_hot_r, event_one_hot_r, timex3_one_hot_r)
+                xml_sent_embed_r = self.get_sent_embed_with_xml_tag(sent_embed_r, source_one_hot_r, target_one_hot_r, event_one_hot_r, timex3_one_hot_r)
 
-                sent_embed_list_r.append(sent_embed_r)
+                xml_event_bitmap_r = self.get_new_bitmap_with_xml_tag(source_one_hot_r, target_one_hot_r, event_one_hot_r)
+                xml_timex3_bitmap_r = self.get_new_bitmap_with_xml_tag(source_one_hot_r, target_one_hot_r, timex3_one_hot_r)
+                
+                # add xml tag to sentence tokens
+                xml_sent_token_r = self.get_sent_token_with_xml_tag(sent_token_r, source_one_hot_r, target_one_hot_r, event_one_hot_r, timex3_one_hot_r)
+
+                output_buffer += self.get_output_buffer(file_content, xml_sent_token_r, label_r)
+                
+
+                sent_embed_list_r.append(xml_sent_embed_r)
                 pos_embed_source_list_r.append(pos_embed_source_r)
                 pos_embed_target_list_r.append(pos_embed_target_r)
 
                 pos_embed_first_entity_list_r.append(pos_embed_first_entity_r)
                 pos_embed_second_entity_list_r.append(pos_embed_second_entity_r)
                 
-                event_one_hot_list_r.append(event_one_hot_r)
-                timex3_one_hot_list_r.append(timex3_one_hot_r)
+                event_one_hot_list_r.append(xml_event_bitmap_r)
+                timex3_one_hot_list_r.append(xml_timex3_bitmap_r)
+
+                # event_one_hot_list_r.append(event_one_hot_r)
+                # timex3_one_hot_list_r.append(timex3_one_hot_r)
+
+                
                 source_one_hot_list_r.append(source_one_hot_r)
                 target_one_hot_list_r.append(target_one_hot_r)
                 boolean_features_list_r.append(boolean_features)
                 label_list_r.append(label_r)
 
 
+
+                
             # one_file_list_r = [sent_embed_list_r, pos_embed_source_list_r, pos_embed_target_list_r, event_one_hot_list_r, timex3_one_hot_list_r,
             #                    source_one_hot_list_r, target_one_hot_list_r, boolean_features_list_r, label_list_r]
 
@@ -1342,6 +1526,17 @@ class THYME(object):
                 all_files_list_r = [all_files_list_r[0] + one_file_list_r[0], all_files_list_r[1] + one_file_list_r[1], all_files_list_r[2] + one_file_list_r[2],
                                     all_files_list_r[3] + one_file_list_r[3], all_files_list_r[4] + one_file_list_r[4], all_files_list_r[5] + one_file_list_r[5]]
 
+
+        output_file_name = self.get_output_file_name(data_path, closure_test_set)
+        print("output file name: ", output_file_name)
+
+        ###########################################
+        # Same output format as in Dligach's paper
+        # i.e. only tokens augmented with xml tags
+        # e.g. She had a <e> fever </e> <t> yesterday </t> .
+
+        # with open(output_file_name, 'w') as f:
+        #     f.write(output_buffer)
                 
         return all_files_list_r
 
@@ -1452,7 +1647,10 @@ class THYME(object):
 
 def main():
 
-
+    is_full_dataset = True
+    # is_full_dataset = False
+    
+    
     thyme_data_path = '/home/yuyi/corpora/THYME'
     thyme_anno_path = '/home/yuyi/corpora/THYME/thymedata-master/coloncancer'
 
@@ -1471,45 +1669,40 @@ def main():
 
     embedding = pickle.load(open(embedding_path, 'rb'))
     
-    thyme = THYME(embedding, thyme_data_path, thyme_anno_path)
+    thyme = THYME(embedding, thyme_data_path, thyme_anno_path, full_dataset = is_full_dataset)
 
     print ("thyme: ", thyme)
     
     train_set, dev_set, test_set, closure_test_set = thyme.create_padding_set()
 
     # train_set = thyme.create_padding_set()
-
     
     print ("train set label statistics.....")
-    # train_label_count = thyme.calculate_label_total(train_set[8])
-    # train_label_count = thyme.calculate_label_total(train_set[7])
     train_label_count = thyme.calculate_label_total(train_set[-1])
     print ("test set label statistics.....")
-    # test_label_count = thyme.calculate_label_total(test_set[8])
-    # test_label_count = thyme.calculate_label_total(test_set[7])
     test_label_count = thyme.calculate_label_total(test_set[-1])
 
-    # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test.pkl'
-    # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_event.pkl'
-    # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_with_xml_tag.pkl'
-    # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_without_xml_tag.pkl'
-    # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_without_xml_tag_pos_embed_source.pkl'
-    # pickle.dump([train_set, dev_set, test_set, closure_test_set, train_label_count], open(padding_data_test_path, 'wb'))
+    if is_full_dataset:
+        # padding_data_path = '/home/yuyi/cs6890/project/data/padding.pkl'
+        # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_event.pkl'
+        padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag.pkl'
+        # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_without_xml_tag.pkl'
+        # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_without_xml_tag_pos_embed_source.pkl'
+        pickle.dump([train_set, dev_set, test_set, closure_test_set, train_label_count], open(padding_data_path, 'wb'))
+        
+    else:
+    
+        # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test.pkl'
+        # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_event.pkl'
+        padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_with_xml_tag.pkl'
+        # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_without_xml_tag.pkl'
+        # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_without_xml_tag_pos_embed_source.pkl'
+        pickle.dump([train_set, dev_set, test_set, closure_test_set, train_label_count], open(padding_data_test_path, 'wb'))
 
-    # padding_data_path = '/home/yuyi/cs6890/project/data/padding.pkl'
-    # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_event.pkl'
-    padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag.pkl'
-    # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_without_xml_tag.pkl'
-    # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_without_xml_tag_pos_embed_source.pkl'
-    pickle.dump([train_set, dev_set, test_set, closure_test_set, train_label_count], open(padding_data_path, 'wb'))
 
     # print ("train_set[0] length: ", len(train_set[0]))
     # print ("train_set[0]: ", train_set[0])
 
-    # print ("train_set[5] length: ", len(train_set[5]))
-    # print ("train_set[5]: ", train_set[5])
-
-    
 
 if __name__ == '__main__':
     main()    

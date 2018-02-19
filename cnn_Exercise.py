@@ -23,7 +23,7 @@ parser.add_argument('--learning_rate',
                     help='Initial learning rate.')
 parser.add_argument('--num_epochs',
                     type=int,
-                    default=5000, 
+                    default=1000, 
                     help='Number of epochs to run trainer.')
 parser.add_argument('--drop_out',
                     type=float,
