@@ -210,8 +210,12 @@ sent_embed = train_set[0][idx]
 
 event_bitmap = train_set[1][idx]
 timex3_bitmap = train_set[2][idx]
-source_bitmap = train_set[3][idx]
-target_bitmap = train_set[4][idx]
+# source_bitmap = train_set[3][idx]
+# target_bitmap = train_set[4][idx]
+
+first_entity_bitmap = train_set[3][idx]
+second_entity_bitmap = train_set[4][idx]
+
 # boolean_features = train_set[7][idx]
 # label = train_set[8][idx]
 # label = train_set[7][idx]
@@ -219,7 +223,8 @@ label = train_set[5][idx]
 
 # train_set = [sent_embed, pos_embed_source, pos_embed_target, event_bitmap, timex3_bitmap, source_bitmap, target_bitmap, boolean_features, label]
 # train_set = [sent_embed, pos_embed_source, pos_embed_target, event_bitmap, timex3_bitmap, source_bitmap, target_bitmap, label]
-train_set = [sent_embed, event_bitmap, timex3_bitmap, source_bitmap, target_bitmap, label]
+# train_set = [sent_embed, event_bitmap, timex3_bitmap, source_bitmap, target_bitmap, label]
+train_set = [sent_embed, event_bitmap, timex3_bitmap, first_entity_bitmap, second_entity_bitmap, label]
 
 # train_set = [sent_embed, pos_embed_first_entity, pos_embed_second_entity, event_bitmap, timex3_bitmap, source_bitmap, target_bitmap, label]
 # train_set = [sent_embed, pos_embed_source, pos_embed_target, event_bitmap, timex3_bitmap, label]

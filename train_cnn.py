@@ -22,7 +22,7 @@ class ConvNet(object):
     return ffn
 
   # Model 2: one conv layer
-  def model_2(self, rep, event_one_hot, timex3_one_hot, hidden_size, max_sen_len, decay):
+  def model_2(self, rep, event_one_hot, timex3_one_hot, first_entity_bitmap, second_entity_bitmap, hidden_size, max_sen_len, decay):
     # ----------------- YOUR CODE HERE ----------------------
     #
 
@@ -30,7 +30,10 @@ class ConvNet(object):
     
     # X = tf.concat([rep, tf.to_float(tf.expand_dims(event_one_hot, 2)), tf.to_float(tf.expand_dims(timex3_one_hot, 2)),
     #                tf.to_float(tf.expand_dims(source_one_hot, 2)), tf.to_float(tf.expand_dims(target_one_hot, 2))], 2)
-    X = tf.concat([rep, tf.to_float(tf.expand_dims(event_one_hot, 2)), tf.to_float(tf.expand_dims(timex3_one_hot, 2))], 2)
+    # X = tf.concat([rep, tf.to_float(tf.expand_dims(event_one_hot, 2)), tf.to_float(tf.expand_dims(timex3_one_hot, 2))], 2)
+
+    X = tf.concat([rep, tf.to_float(tf.expand_dims(event_one_hot, 2)), tf.to_float(tf.expand_dims(timex3_one_hot, 2)),
+                   tf.to_float(tf.expand_dims(first_entity_bitmap, 2)), tf.to_float(tf.expand_dims(second_entity_bitmap, 2))], 2)
     
     print ("X shape: ", X.get_shape())
     X_4d = tf.expand_dims(X, 3)
@@ -43,7 +46,7 @@ class ConvNet(object):
     ###########################################################
     # using 200 filters each for filter sizes 2, 3, 4 and 5
     
-    conv1_size2 = tf.layers.conv2d(inputs=X_4d, filters=200, kernel_size=[2, 302], activation=tf.nn.relu)
+    conv1_size2 = tf.layers.conv2d(inputs=X_4d, filters=200, kernel_size=[2, 304], activation=tf.nn.relu)
     print ("conv1_size2 shape: ", conv1_size2.get_shape())
     # pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 1], strides=2)
     pool1_size2 = tf.layers.max_pooling2d(inputs=conv1_size2, pool_size=[max_sen_len - 1, 1], strides=[max_sen_len - 1, 1])
@@ -51,16 +54,16 @@ class ConvNet(object):
     pool1_size2_flat = tf.reshape(pool1_size2, [-1, 200])
     print ("pool1_size2_flat: ", pool1_size2_flat.get_shape())
 
-    conv1_size3 = tf.layers.conv2d(inputs=X_4d, filters=200, kernel_size=[3, 302], activation=tf.nn.relu)
+    conv1_size3 = tf.layers.conv2d(inputs=X_4d, filters=200, kernel_size=[3, 304], activation=tf.nn.relu)
     pool1_size3 = tf.layers.max_pooling2d(inputs=conv1_size3, pool_size=[max_sen_len - 2, 1], strides=[max_sen_len - 2, 1])
     pool1_size3_flat = tf.reshape(pool1_size3, [-1, 200])
     print ("pool1_size3_flat: ", pool1_size3_flat.get_shape())
 
-    conv1_size4 = tf.layers.conv2d(inputs=X_4d, filters=200, kernel_size=[4, 302], activation=tf.nn.relu)
+    conv1_size4 = tf.layers.conv2d(inputs=X_4d, filters=200, kernel_size=[4, 304], activation=tf.nn.relu)
     pool1_size4 = tf.layers.max_pooling2d(inputs=conv1_size3, pool_size=[max_sen_len - 3, 1], strides=[max_sen_len - 3, 1])
     pool1_size4_flat = tf.reshape(pool1_size4, [-1, 200])
 
-    conv1_size5 = tf.layers.conv2d(inputs=X_4d, filters=200, kernel_size=[5, 302], activation=tf.nn.relu)
+    conv1_size5 = tf.layers.conv2d(inputs=X_4d, filters=200, kernel_size=[5, 304], activation=tf.nn.relu)
     pool1_size5 = tf.layers.max_pooling2d(inputs=conv1_size3, pool_size=[max_sen_len - 4, 1], strides=[max_sen_len - 4, 1])
     pool1_size5_flat = tf.reshape(pool1_size5, [-1, 200])
     
@@ -113,8 +116,11 @@ class ConvNet(object):
     # pos_embed_second_entity = data_set[2]
     event_one_hot = data_set[1]
     timex3_one_hot = data_set[2]
-    source_one_hot = data_set[3]
-    target_one_hot = data_set[4]
+    # source_one_hot = data_set[3]
+    # target_one_hot = data_set[4]
+    first_entity_bitmap = data_set[3]
+    second_entity_bitmap = data_set[4]
+    
     # boolean_features = data_set[7]
     # label = data_set[8]
     label = data_set[5]
@@ -156,7 +162,7 @@ class ConvNet(object):
     #   label0_pos, label1_pos, label2_pos, label3_pos, label4_pos, label5_pos, label6_pos, label7_pos, label8_pos, label9_pos
 
     return sent_embed[s:e], event_one_hot[s:e], \
-      timex3_one_hot[s:e], source_one_hot[s:e], target_one_hot[s:e], label[s:e], \
+      timex3_one_hot[s:e], first_entity_bitmap[s:e], second_entity_bitmap[s:e], label[s:e], \
       label0_pos, label1_pos, label2_pos, label3_pos, label4_pos, label5_pos, label6_pos, label7_pos, label8_pos, label9_pos
 
   
@@ -324,8 +330,11 @@ class ConvNet(object):
         # pos_embed_second_entity = tf.placeholder(tf.int32, [None, max_sent_len])
         event_one_hot = tf.placeholder(tf.int32, [None, max_sent_len])
         timex3_one_hot = tf.placeholder(tf.int32, [None, max_sent_len])
-        source_one_hot = tf.placeholder(tf.int32, [None, max_sent_len])
-        target_one_hot = tf.placeholder(tf.int32, [None, max_sent_len])
+        # source_one_hot = tf.placeholder(tf.int32, [None, max_sent_len])
+        # target_one_hot = tf.placeholder(tf.int32, [None, max_sent_len])
+        first_entity_bitmap = tf.placeholder(tf.int32, [None, max_sent_len])
+        second_entity_bitmap = tf.placeholder(tf.int32, [None, max_sent_len])
+        
         # boolean_features = tf.placeholder(tf.int32, [None, max_sent_len])
         is_training = tf.placeholder(tf.bool)
         
@@ -391,7 +400,7 @@ class ConvNet(object):
         features = self.model_1(rep, event_one_hot, timex3_one_hot, source_one_hot, target_one_hot, hidden_size, max_sent_len, decay)
       # model 2: add one convolutional layer
       elif self.mode == 2:
-        features = self.model_2(rep, event_one_hot, timex3_one_hot, hidden_size, max_sent_len, decay)
+        features = self.model_2(rep, event_one_hot, timex3_one_hot, first_entity_bitmap, second_entity_bitmap, hidden_size, max_sent_len, decay)
 
       # ======================================================================
       # define softmax layer
@@ -519,7 +528,7 @@ class ConvNet(object):
             # = self.get_batch(train_set, s, e)
 
             (batch_sent_embed, batch_event_one_hot,
-             batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label,
+             batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label,
              batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
              batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
             = self.get_batch(train_set, s, e)
@@ -548,8 +557,8 @@ class ConvNet(object):
                        feed_dict={sent_embed: batch_sent_embed,
                                   event_one_hot: batch_event_one_hot,
                                   timex3_one_hot: batch_timex3_one_hot,
-                                  source_one_hot: batch_source_one_hot,
-                                  target_one_hot: batch_target_one_hot,
+                                  first_entity_bitmap: batch_first_entity_bitmap,
+                                  second_entity_bitmap: batch_second_entity_bitmap,
                                   # boolean_features : batch_boolean_features,
                                   is_training: True,
                                   label: batch_label,
@@ -610,7 +619,7 @@ class ConvNet(object):
               # = self.get_batch(train_set, s, e)
 
               (batch_sent_embed, batch_event_one_hot,
-               batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label,
+               batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label,
                batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
                batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
               = self.get_batch(train_set, s, e)
@@ -628,8 +637,8 @@ class ConvNet(object):
                          feed_dict={sent_embed: batch_sent_embed,
                                     event_one_hot: batch_event_one_hot,
                                     timex3_one_hot: batch_timex3_one_hot,
-                                    source_one_hot: batch_source_one_hot,
-                                    target_one_hot: batch_target_one_hot,
+                                    first_entity_bitmap: batch_first_entity_bitmap,
+                                    second_entity_bitmap: batch_second_entity_bitmap,
                                     # boolean_features : batch_boolean_features,
                                     is_training: False,
                                     label: batch_label,
@@ -661,93 +670,95 @@ class ConvNet(object):
           
           #######################################################################
           # evaluate model every 100 epochs on test data, for Closure(S) ^ H
-          # S is predicted value and H is manually annotated value.          
-          if (i + 1) % 100 == 0:
+          # S is predicted value and H is manually annotated value.
+          # It seems that Dligach does not use Closure(S) for calculating F measure
+          # Let's skip this for now...
+          # if (i + 1) % 100 == 0:
 
-            print ("this is from Closure(S) ^ H ")
+          #   print ("this is from Closure(S) ^ H ")
             
-            all_sent_embed, all_source_bitmap, all_target_bitmap, all_pred_label, all_true_label = [], [], [], [], []
-            s = 0
-            total_correct = 0
+          #   all_sent_embed, all_source_bitmap, all_target_bitmap, all_pred_label, all_true_label = [], [], [], [], []
+          #   s = 0
+          #   total_correct = 0
 
-            total_confusion_matrix_value = np.zeros((class_num, class_num), int)
+          #   total_confusion_matrix_value = np.zeros((class_num, class_num), int)
 
-            print ("test size: ", test_size)
+          #   print ("test size: ", test_size)
 
-            while s < test_size:
-              # skip the last batch for testing data
-              if s + batch_size >= test_size:
-                break
-              e = s + batch_size
+          #   while s < test_size:
+          #     # skip the last batch for testing data
+          #     if s + batch_size >= test_size:
+          #       break
+          #     e = s + batch_size
 
-              # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
-              #  batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_boolean_features, batch_label,
-              #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
-              #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
-              # = self.get_batch(test_set, s, e)              
+          #     # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
+          #     #  batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_boolean_features, batch_label,
+          #     #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+          #     #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+          #     # = self.get_batch(test_set, s, e)              
 
-              # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
-              #  batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label,
-              #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
-              #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
-              # = self.get_batch(test_set, s, e)              
+          #     # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
+          #     #  batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label,
+          #     #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+          #     #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+          #     # = self.get_batch(test_set, s, e)              
 
-              (batch_sent_embed, batch_event_one_hot,
-               batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label,
-               batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
-               batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
-              = self.get_batch(test_set, s, e)              
-
-              
-              # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
-              #  batch_timex3_one_hot, batch_label,
-              #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
-              #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
-              # = self.get_batch(test_set, s, e)              
+          #     (batch_sent_embed, batch_event_one_hot,
+          #      batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label,
+          #      batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+          #      batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+          #     = self.get_batch(test_set, s, e)              
 
               
-              pred_value = sess.run([pred], \
-                                    feed_dict={sent_embed: batch_sent_embed,
-                                               event_one_hot: batch_event_one_hot,
-                                               timex3_one_hot: batch_timex3_one_hot,
-                                               source_one_hot: batch_source_one_hot,
-                                               target_one_hot: batch_target_one_hot,
-                                               # boolean_features : batch_boolean_features,
-                                               is_training: False,
-                                               label: batch_label,
-                                               label0_pos: batch_label0_pos,
-                                               label1_pos: batch_label1_pos,
-                                               label2_pos: batch_label2_pos,
-                                               label3_pos: batch_label3_pos,
-                                               label4_pos: batch_label4_pos,
-                                               label5_pos: batch_label5_pos,
-                                               label6_pos: batch_label6_pos,
-                                               label7_pos: batch_label7_pos,
-                                               label8_pos: batch_label8_pos,
-                                               label9_pos: batch_label9_pos})
+          #     # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
+          #     #  batch_timex3_one_hot, batch_label,
+          #     #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+          #     #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+          #     # = self.get_batch(test_set, s, e)              
 
               
-              all_sent_embed.extend(batch_sent_embed)
-              all_source_bitmap.extend(batch_source_one_hot)
-              all_target_bitmap.extend(batch_target_one_hot)
-              # pred value is in the form of [array([0,0,0,4,6,...])]
-              all_pred_label.extend(pred_value[0])
-              all_true_label.extend(batch_label)
-              
-              s = e
+          #     pred_value = sess.run([pred], \
+          #                           feed_dict={sent_embed: batch_sent_embed,
+          #                                      event_one_hot: batch_event_one_hot,
+          #                                      timex3_one_hot: batch_timex3_one_hot,
+          #                                      first_entity_bitmap: batch_first_entity_bitmap,
+          #                                      second_entity_bitmap: batch_second_entity_bitmap,
+          #                                      # boolean_features : batch_boolean_features,
+          #                                      is_training: False,
+          #                                      label: batch_label,
+          #                                      label0_pos: batch_label0_pos,
+          #                                      label1_pos: batch_label1_pos,
+          #                                      label2_pos: batch_label2_pos,
+          #                                      label3_pos: batch_label3_pos,
+          #                                      label4_pos: batch_label4_pos,
+          #                                      label5_pos: batch_label5_pos,
+          #                                      label6_pos: batch_label6_pos,
+          #                                      label7_pos: batch_label7_pos,
+          #                                      label8_pos: batch_label8_pos,
+          #                                      label9_pos: batch_label9_pos})
 
-            if event_vs_event:
-              self.add_closure_to_predict_label_for_event_vs_event(all_sent_embed, all_source_bitmap, all_target_bitmap, all_pred_label)
-            else:
-              self.add_closure_to_predict_label_for_event_vs_time(all_sent_embed, all_source_bitmap, all_target_bitmap, all_pred_label)
               
-            total_confusion_matrix_value2 = self.get_confusion_matrix(all_pred_label, all_true_label, class_num)
-            print ("confusion matrix: ")
-            print (total_confusion_matrix_value2)
+          #     # all_sent_embed.extend(batch_sent_embed)
+          #     # all_source_bitmap.extend(batch_source_one_hot)
+          #     # all_target_bitmap.extend(batch_target_one_hot)
+          #     # # pred value is in the form of [array([0,0,0,4,6,...])]
+          #     # all_pred_label.extend(pred_value[0])
+          #     # all_true_label.extend(batch_label)
+              
+          #     s = e
+
+          #   # if event_vs_event:
+          #   #   self.add_closure_to_predict_label_for_event_vs_event(all_sent_embed, all_source_bitmap, all_target_bitmap, all_pred_label)
+          #   # else:
+          #   #   self.add_closure_to_predict_label_for_event_vs_time(all_sent_embed, all_source_bitmap, all_target_bitmap, all_pred_label)
+              
+          #   total_confusion_matrix_value2 = self.get_confusion_matrix(all_pred_label, all_true_label, class_num)
+          #   print ("confusion matrix: ")
+          #   print (total_confusion_matrix_value2)
             
-            # recall2_value = np.sum(total_confusion_matrix_value2[3:5, 3:5]) / np.sum(total_confusion_matrix_value2[3:5, :])
-            # recall2_value = np.sum(total_confusion_matrix_value2[[3, 4], [3, 4]]) / np.sum(total_confusion_matrix_value2[3:5, :])
-            # print ("recall2: ", recall2_value)
+          #   # recall2_value = np.sum(total_confusion_matrix_value2[3:5, 3:5]) / np.sum(total_confusion_matrix_value2[3:5, :])
+          #   # recall2_value = np.sum(total_confusion_matrix_value2[[3, 4], [3, 4]]) / np.sum(total_confusion_matrix_value2[3:5, :])
+          #   # print ("recall2: ", recall2_value)
 
             
           ###############################################################################
@@ -783,7 +794,7 @@ class ConvNet(object):
               # = self.get_batch(closure_test_set, s, e)              
 
               (batch_sent_embed, batch_event_one_hot,
-               batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label,
+               batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label,
                batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
                batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
               = self.get_batch(closure_test_set, s, e)              
@@ -801,8 +812,8 @@ class ConvNet(object):
                          feed_dict={sent_embed: batch_sent_embed,
                                     event_one_hot: batch_event_one_hot,
                                     timex3_one_hot: batch_timex3_one_hot,
-                                    source_one_hot: batch_source_one_hot,
-                                    target_one_hot: batch_target_one_hot,
+                                    first_entity_bitmap: batch_first_entity_bitmap,
+                                    second_entity_bitmap: batch_second_entity_bitmap,
                                     # boolean_features : batch_boolean_features,
                                     is_training: False,
                                     label: batch_label,
@@ -872,7 +883,7 @@ class ConvNet(object):
           # = self.get_batch(test_set, s, e)          
 
           (batch_sent_embed, batch_event_one_hot, \
-           batch_timex3_one_hot, batch_source_one_hot, batch_target_one_hot, batch_label, \
+           batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label, \
            batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
            batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
           = self.get_batch(test_set, s, e)          
@@ -890,8 +901,8 @@ class ConvNet(object):
                      feed_dict={sent_embed: batch_sent_embed,
                                 event_one_hot: batch_event_one_hot,
                                 timex3_one_hot: batch_timex3_one_hot,
-                                source_one_hot: batch_source_one_hot,
-                                target_one_hot: batch_target_one_hot,
+                                first_entity_bitmap: batch_first_entity_bitmap,
+                                second_entity_bitmap: batch_second_entity_bitmap,
                                 # boolean_features : batch_boolean_features,
                                 is_training: False,
                                 label: batch_label,

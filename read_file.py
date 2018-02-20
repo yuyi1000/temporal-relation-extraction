@@ -352,7 +352,8 @@ class THYME(object):
             #################################################
             # use only three labels may improve final result
             # self.label_dict = {'NONE' : 0, 'CONTAINS_LR' : 1, 'CONTAINS_RL' : 2}
-            self.label_dict = {'none' : 0, 'contains' : 1, 'contains_1' : 2}
+            # self.label_dict = {'none' : 0, 'contains' : 1, 'contains_1' : 2}
+            self.label_dict = {'none' : 0, 'contains_lr' : 1, 'contains_rl' : 2}
             
             ###############################
             # Full dataset
@@ -680,19 +681,25 @@ class THYME(object):
             boolean_feature = 1 if tlink.source_b < tlink.target_b else -1
             boolean_features = [boolean_feature] * len(sent_token)
 
-            # if tlink.type_ == "OVERLAP" or tlink.type_ == "NONE":
-            #     label = self.label_dict[tlink.type_]
-            # else:
-            #     suffix = "_LR" if boolean_feature == 1 else "_RL"
-            #     label = self.label_dict[tlink.type_ + suffix]
-
             if tlink.type_ == "none":
-                label = self.label_dict[tlink.type_.lower()]
+                label = self.label_dict[tlink.type_]
             elif tlink.type_ == "contains":
-                suffix = "_1" if tlink.inverse else ""
+                suffix = "_lr" if boolean_feature == 1 else "_rl"
                 label = self.label_dict[tlink.type_ + suffix]
             else:
                 label = -1
+            
+                
+
+            ###########################################################
+            # this is for Dligach's label notation for event-vs-time
+            # if tlink.type_ == "none":
+            #     label = self.label_dict[tlink.type_]
+            # elif tlink.type_ == "contains":
+            #     suffix = "_1" if tlink.inverse else ""
+            #     label = self.label_dict[tlink.type_ + suffix]
+            # else:
+            #     label = -1
             
             # filter some tlink structs
             if (sent_idx != -1 and sum(source_one_hot) != 0 and sum(target_one_hot) != 0 and label != -1):
@@ -1407,6 +1414,10 @@ class THYME(object):
             timex3_one_hot_list_r = []
             source_one_hot_list_r = []
             target_one_hot_list_r = []
+
+            first_entity_bitmap_list_r = []
+            second_entity_bitmap_list_r = []
+            
             boolean_features_list_r = []
             label_list_r = []
 
@@ -1422,11 +1433,11 @@ class THYME(object):
                 source_idx = source_one_hot_r.index(1)
                 target_idx = target_one_hot_r.index(1)
                 if source_idx < target_idx:
-                    first_entity = source_one_hot_r
-                    second_entity = target_one_hot_r
+                    first_entity_bitmap = source_one_hot_r
+                    second_entity_bitmap = target_one_hot_r
                 else:
-                    first_entity = target_one_hot_r
-                    second_entity = source_one_hot_r
+                    first_entity_bitmap = target_one_hot_r
+                    second_entity_bitmap = source_one_hot_r
                 
                 pos_embed_source_r = self.get_pos_embed(source_one_hot_r)
                 pos_embed_target_r = self.get_pos_embed(target_one_hot_r)
@@ -1434,8 +1445,8 @@ class THYME(object):
                 
                 ####################################################
                 # add first evnet and second event in terms of position.
-                pos_embed_first_entity_r = self.get_pos_embed(first_entity)
-                pos_embed_second_entity_r = self.get_pos_embed(second_entity)
+                # pos_embed_first_entity_r = self.get_pos_embed(first_entity_bitmap)
+                # pos_embed_second_entity_r = self.get_pos_embed(second_entity_bitmap)
 
                 
                 sent_embed_r = sent_embed_list[index]
@@ -1459,6 +1470,9 @@ class THYME(object):
 
                 xml_event_bitmap_r = self.get_new_bitmap_with_xml_tag(source_one_hot_r, target_one_hot_r, event_one_hot_r)
                 xml_timex3_bitmap_r = self.get_new_bitmap_with_xml_tag(source_one_hot_r, target_one_hot_r, timex3_one_hot_r)
+
+                xml_first_entity_bitmap_r = self.get_new_bitmap_with_xml_tag(source_one_hot_r, target_one_hot_r, first_entity_bitmap)
+                xml_second_entity_bitmap_r = self.get_new_bitmap_with_xml_tag(source_one_hot_r, target_one_hot_r, second_entity_bitmap)
                 
                 # add xml tag to sentence tokens
                 xml_sent_token_r = self.get_sent_token_with_xml_tag(sent_token_r, source_one_hot_r, target_one_hot_r, event_one_hot_r, timex3_one_hot_r)
@@ -1470,18 +1484,21 @@ class THYME(object):
                 pos_embed_source_list_r.append(pos_embed_source_r)
                 pos_embed_target_list_r.append(pos_embed_target_r)
 
-                pos_embed_first_entity_list_r.append(pos_embed_first_entity_r)
-                pos_embed_second_entity_list_r.append(pos_embed_second_entity_r)
+                # pos_embed_first_entity_list_r.append(pos_embed_first_entity_r)
+                # pos_embed_second_entity_list_r.append(pos_embed_second_entity_r)
                 
                 event_one_hot_list_r.append(xml_event_bitmap_r)
                 timex3_one_hot_list_r.append(xml_timex3_bitmap_r)
 
+                first_entity_bitmap_list_r.append(xml_first_entity_bitmap_r)
+                second_entity_bitmap_list_r.append(xml_second_entity_bitmap_r)
+                
                 # event_one_hot_list_r.append(event_one_hot_r)
                 # timex3_one_hot_list_r.append(timex3_one_hot_r)
-
                 
                 source_one_hot_list_r.append(source_one_hot_r)
                 target_one_hot_list_r.append(target_one_hot_r)
+
                 boolean_features_list_r.append(boolean_features)
                 label_list_r.append(label_r)
 
@@ -1500,11 +1517,13 @@ class THYME(object):
 
             """
             Although source_one_hot and target_one_hot is not used in the neural network (actual it can't), it is used in deciding the closure.
+            Actually, it can't even be used in deciding the closure because that will bring label knowledge to the prediction system.
             """
             
-            one_file_list_r = [sent_embed_list_r, event_one_hot_list_r, timex3_one_hot_list_r, source_one_hot_list_r, target_one_hot_list_r, label_list_r]
+            # one_file_list_r = [sent_embed_list_r, event_one_hot_list_r, timex3_one_hot_list_r, source_one_hot_list_r, target_one_hot_list_r, label_list_r]
             
-
+            one_file_list_r = [sent_embed_list_r, event_one_hot_list_r, timex3_one_hot_list_r, first_entity_bitmap_list_r, second_entity_bitmap_list_r, label_list_r]
+            
             # one_file_list_r = [sent_embed_list_r, pos_embed_first_entity_list_r, pos_embed_second_entity_list_r, event_one_hot_list_r, timex3_one_hot_list_r,
             #                    source_one_hot_list_r, target_one_hot_list_r, label_list_r]
 
