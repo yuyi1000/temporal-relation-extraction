@@ -283,7 +283,7 @@ class WordEmbedding2:
 #
 
 class THYME(object):
-    def __init__(self, embedding, thyme_data_path, thyme_anno_path, full_dataset=False):
+    def __init__(self, embedding, thyme_data_path, thyme_anno_path, physio_graph_data_path='', physio_graph_anno_path='', full_dataset=False):
 
         train_data_files = self.collect_id_files(thyme_data_path + '/train/')
 
@@ -363,11 +363,19 @@ class THYME(object):
                                                 train_anno_files, event_vs_event=False, event_vs_time=True)
                 self.dev_set = self.load_data(pattern, nlp, thyme_data_path + '/dev/', thyme_anno_path + '/dev/',
                                               dev_data_files, dev_anno_files, event_vs_event=False, event_vs_time=True)
-                self.test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
-                                               test_anno_files, event_vs_event=False, event_vs_time=True)
-                self.closure_test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
-                                                       test_anno_files, event_vs_event=False, event_vs_time=True, closure_test_set=True)
+                # self.test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
+                #                                test_anno_files, event_vs_event=False, event_vs_time=True)
+                # self.closure_test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
+                #                                        test_anno_files, event_vs_event=False, event_vs_time=True, closure_test_set=True)
+                self.test_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, ['patient101_queries'],
+                                               ['patient101_queries.ann'], event_vs_event=False, event_vs_time=True)
+                # self.closure_test_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, ['patient101_queries'],
+                #                                        ['patient101_queries.ann'], event_vs_event=False, event_vs_time=True, closure_test_set=True)
+                self.closure_test_set = deepcopy(self.test_set)
+                self.combine_two_sets(self.train_set, self.dev_set)
+                
 
+                
             ################################
             # Smaller dataset for debugging
             else:
@@ -375,11 +383,22 @@ class THYME(object):
                                                 train_data_files, train_anno_files_test, event_vs_event=False, event_vs_time=True)
                 self.dev_set = self.load_data(pattern, nlp, thyme_data_path + '/dev/', thyme_anno_path + '/dev/', dev_data_files,
                                               dev_anno_files_test, event_vs_event=False, event_vs_time=True)
-                self.test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
-                                               test_anno_files_test, event_vs_event=False, event_vs_time=True)
-                self.closure_test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/',
-                                                       test_data_files, test_anno_files_test, event_vs_event=False, event_vs_time=True, closure_test_set=True)
-            
+                # self.test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
+                #                                test_anno_files_test, event_vs_event=False, event_vs_time=True)
+                self.test_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, ['patient101_queries'],
+                                               ['patient101_queries.ann'], event_vs_event=False, event_vs_time=True)
+                
+                self.combine_two_sets(self.train_set, self.dev_set)
+                # self.closure_test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/',
+                #                                        test_data_files, test_anno_files_test, event_vs_event=False, event_vs_time=True, closure_test_set=True)
+                self.closure_test_set = deepcopy(self.test_set)
+                
+
+    # combine two sets into the first set
+    def combine_two_sets(self, first_set, second_set):
+        for i in range(len(first_set)):
+            first_set[i] += second_set[i]
+                
 
     def find_entity(self, entity_list, id_):
         for entity in entity_list:
@@ -387,9 +406,72 @@ class THYME(object):
                 return entity
 
 
+    def collect_physio_graph_anno(self, path_to_file, event_vs_event, event_vs_time):
+            
+        event_list = []
+        timex3_list = []
+        entity_list = []
+        tlink_list = []
+
+        # scan for entities, events and timex3s.
+        for line in open(path_to_file):
+            line = line.strip()
+            if line[0] == 'T':
+                tid, tbody, _ = line.split('\t')
+                tid = tid[1:]
+                ttype, tbegin, tend = tbody.split(' ')
+                if ttype == 'Timex':
+                    ttype = 'TIMEX3'
+                    timex3_list.append((int(tbegin), int(tend)))
+                if ttype == 'Event':
+                    ttype = 'EVENT'
+                    event_list.append((int(tbegin), int(tend)))
+                entity_list.append(Entity(int(tid), int(tbegin), int(tend), ttype))
+
+        # for entity in entity_list:
+        #     entity.displayEntity()
+
+        # print('timex3 list length: ', len(timex3_list))
+        print('timex3 list: ', timex3_list)
+        print('event list: ', event_list)
+        
+        # scan for relations.
+        for line in open(path_to_file):
+            line = line.strip()
+            if line[0] == 'R':
+                rid, rbody = line.split('\t')
+                rid = rid[1:]
+                rtype, rsource, rtarget = rbody.split(' ')
+                rsource = rsource[rsource.find('T'):]
+                rtarget = rtarget[rtarget.find('T'):]
+                esource = self.find_entity(entity_list, int(rsource[1:]))
+                etarget = self.find_entity(entity_list, int(rtarget[1:]))
+                source_type = esource.type_
+                target_type = etarget.type_
+
+                source_b = esource.span_b
+                source_e = esource.span_e
+
+                target_b = etarget.span_b
+                target_e = etarget.span_e
+                
+                if event_vs_event:
+                    if source_type == 'EVENT' and target_type == "EVENT":
+                        tlink_list.append(TLINK(source_b, source_e, target_b, target_e, rtype, inverse=(int(source_b) > int(target_b))))
+                if event_vs_time:
+                    if (source_type == 'EVENT' and target_type == 'TIMEX3'):
+                        tlink_list.append(TLINK(source_b, source_e, target_b, target_e, rtype, event_vs_event=False, inverse=True))
+                    if (source_type == 'TIMEX3' and target_type == 'EVENT'):
+                        tlink_list.append(TLINK(source_b, source_e, target_b, target_e, rtype, event_vs_event=False, inverse=False))
+                        
+        event_list.sort()
+        timex3_list.sort()
+        
+        return event_list, timex3_list, tlink_list        
+
             
     # collect event list, timex3 list and TLINK list from annotation file
-    def collect_anno(self, path_to_file, event_vs_event, event_vs_time):
+    def collect_thyme_anno(self, path_to_file, event_vs_event, event_vs_time):
         print ("collecting events...")
 
         tree = ET.parse(path_to_file)
@@ -1291,9 +1373,9 @@ class THYME(object):
             # anno_file is the name of annotation file
             one_file = anno_file[:anno_file.find('.')]
 
+            print('data path: ', data_path)
+            print('one file: ', one_file)
             file_content = open(join(data_path, one_file)).read()
-
-           
 
             # sent_token_list is a list of sentence with its character offset for each token.
             # E.g. "Hello world. See you." will be represented as
@@ -1348,9 +1430,12 @@ class THYME(object):
             event_token_one_hot_list = []
             timex3_token_one_hot_list = []
             print ("anno file: ", anno_file)
-            
-            event_list, timex3_list, tlink_list = self.collect_anno(anno_path + anno_file, event_vs_event, event_vs_time)
-            # self.check_collect_anno(tlink_list, sent_token_list, file_content)
+
+            if anno_path.find('thyme') != -1:
+                event_list, timex3_list, tlink_list = self.collect_thyme_anno(anno_path + anno_file, event_vs_event, event_vs_time)
+            else:
+                event_list, timex3_list, tlink_list = self.collect_physio_graph_anno(anno_path + anno_file, event_vs_event, event_vs_time)
+                # self.check_collect_anno(tlink_list, sent_token_list, file_content)
             
             
             if closure_test_set:
@@ -1673,6 +1758,8 @@ def main():
     thyme_data_path = '/home/yuyi/corpora/THYME'
     thyme_anno_path = '/home/yuyi/corpora/THYME/thymedata-master/coloncancer'
 
+    physio_graph_data_path = '/home/yuyi/workspace/brat-v1.3_Crunchy_Frog/data/queries/patient101/'
+    physio_graph_anno_path = '/home/yuyi/workspace/brat-v1.3_Crunchy_Frog/data/queries/patient101/'
     
     # thyme = THYME(None, thyme_data_path, thyme_anno_path)
     # word_emb_path = '/home/yuyi/cs6890/hw06/snli/GoogleNews-vectors-negative300.bin'
@@ -1688,8 +1775,8 @@ def main():
 
     embedding = pickle.load(open(embedding_path, 'rb'))
     
-    thyme = THYME(embedding, thyme_data_path, thyme_anno_path, full_dataset = is_full_dataset)
-
+    # thyme = THYME(embedding, thyme_data_path, thyme_anno_path, full_dataset = is_full_dataset)
+    thyme = THYME(embedding, thyme_data_path, thyme_anno_path, physio_graph_data_path=physio_graph_data_path, physio_graph_anno_path=physio_graph_anno_path, full_dataset=is_full_dataset)
     print ("thyme: ", thyme)
     
     train_set, dev_set, test_set, closure_test_set = thyme.create_padding_set()
@@ -1698,9 +1785,13 @@ def main():
     
     print ("train set label statistics.....")
     train_label_count = thyme.calculate_label_total(train_set[-1])
+    print ("dev set label statistics.....")
+    dev_label_count = thyme.calculate_label_total(dev_set[-1])    
     print ("test set label statistics.....")
     test_label_count = thyme.calculate_label_total(test_set[-1])
-
+    print ("closure test set label statistics.....")
+    closure_test_label_count = thyme.calculate_label_total(closure_test_set[-1])
+    
     if is_full_dataset:
         # padding_data_path = '/home/yuyi/cs6890/project/data/padding.pkl'
         # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_event.pkl'
