@@ -6,7 +6,8 @@ import numpy as np
 ###############################################################
 # Recurrent neural network class/
 class ConvNet(object):
-  def __init__(self, mode):
+  # use model 2 as default
+  def __init__(self, mode=2):
     self.mode = mode
 
 
@@ -279,7 +280,7 @@ class ConvNet(object):
   
   
   def train_and_evaluate(self, FLAGS, embedding, train_set, dev_set, test_set, closure_test_set, train_label_count):
-    class_num     = 10
+    class_num     = 3
     num_epochs    = FLAGS.num_epochs
     batch_size    = FLAGS.batch_size
     learning_rate = FLAGS.learning_rate
@@ -289,6 +290,8 @@ class ConvNet(object):
 
     drop_out = FLAGS.drop_out
     model_path = FLAGS.model_path
+
+    model_dir = model_path[:model_path.rindex('/')]
 
     event_vs_event = "event_vs_event" in FLAGS.thyme_data_dir
     
@@ -497,6 +500,8 @@ class ConvNet(object):
 
 
 
+        '''
+        
         #############################
         # traing the model
 
@@ -506,6 +511,9 @@ class ConvNet(object):
           start_time = time.time()
           s = 0
 
+          # reset batch size
+          batch_size = FLAGS.batch_size
+          
           # total_confusion_matrix_value = np.zeros((class_num, class_num), int)
           
           while s < train_size:
@@ -760,13 +768,21 @@ class ConvNet(object):
           #   # recall2_value = np.sum(total_confusion_matrix_value2[[3, 4], [3, 4]]) / np.sum(total_confusion_matrix_value2[3:5, :])
           #   # print ("recall2: ", recall2_value)
 
-            
+
+          # save model every 100 epochs
+          # if (i + 1) % 100 == 0:
+          #   saver.save(sess, model_dir + '/cnn_event_vs_time_' + str(i + 1) + '_epochs.ckpt')
+
+          
           ###############################################################################
           # evaluate model every 100 epochs on closure test data, for S ^ Closure(H)
           # S is predicted value and H is manually annotated value.
           if (i + 1) % 100 == 0:
 
             print ("this is from S ^ Closure(H) ")
+
+            # because of limited number of test case, batch size is set to be 1.
+            batch_size = 1
             
             s = 0
             total_correct = 0
@@ -807,8 +823,8 @@ class ConvNet(object):
               # = self.get_batch(closure_test_set, s, e)              
               
               
-              correct, confusion_matrix_value \
-              = sess.run([correct_num, confusion_matrix], \
+              predict, correct, confusion_matrix_value \
+              = sess.run([pred, correct_num, confusion_matrix], \
                          feed_dict={sent_embed: batch_sent_embed,
                                     event_one_hot: batch_event_one_hot,
                                     timex3_one_hot: batch_timex3_one_hot,
@@ -827,6 +843,8 @@ class ConvNet(object):
                                     label7_pos: batch_label7_pos,
                                     label8_pos: batch_label8_pos,
                                     label9_pos: batch_label9_pos})
+
+              print ("predict: ", predict)
               
               total_correct += correct
               total_confusion_matrix_value += confusion_matrix_value
@@ -843,15 +861,172 @@ class ConvNet(object):
             
             # f1_value = 2 * precision2_value * recall2_value / (precision2_value + recall2_value)
             # print ("f1 measure: ", f1_value)     
-            
-        save_path = saver.save(sess, model_path)
-        print ("Model saved in file: %s" % save_path)
 
+
+        # save model when training is finished
+        # save_path = saver.save(sess, model_path)
+        # print ("Model saved in file: %s" % save_path)
+
+        '''
+        
+
+        saver.restore(sess, model_path)
+
+
+
+        
+        
+        ###################################################
+        # fine tuning trained model on validation dataset
+
+        epsilon = 1e-8
+        prev_loss = 0
+
+
+        for i in range(num_epochs):
+          print(20 * '*', 'epoch', i+1, 20 * '*')
+
+          start_time = time.time()
+          s = 0
+
+          # reset batch size
+          batch_size = 1
+          
+          # total_confusion_matrix_value = np.zeros((class_num, class_num), int)
+          
+          while s < dev_size:
+            # skip the last batch for training data
+            if s + batch_size >= dev_size:
+              break
+            e = s + batch_size
+            # e = min(s + batch_size, train_size)
+
+
+            (batch_sent_embed, batch_event_one_hot,
+             batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label,
+             batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+             batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+            = self.get_batch(dev_set, s, e)
+            
+            
+            _, loss_value, confusion_matrix_value \
+            = sess.run([train_op, loss, confusion_matrix], \
+                       feed_dict={sent_embed: batch_sent_embed,
+                                  event_one_hot: batch_event_one_hot,
+                                  timex3_one_hot: batch_timex3_one_hot,
+                                  first_entity_bitmap: batch_first_entity_bitmap,
+                                  second_entity_bitmap: batch_second_entity_bitmap,
+                                  # boolean_features : batch_boolean_features,
+                                  is_training: True,
+                                  label: batch_label,
+                                  label1_pos: batch_label1_pos,
+                                  label2_pos: batch_label2_pos,
+                                  label3_pos: batch_label3_pos,
+                                  label4_pos: batch_label4_pos,
+                                  label5_pos: batch_label5_pos,
+                                  label6_pos: batch_label6_pos,
+                                  label7_pos: batch_label7_pos,
+                                  label8_pos: batch_label8_pos,
+                                  label9_pos: batch_label9_pos})
+            
+            s = e
+          end_time = time.time()
+
+          # print ("confusion matrix: ", total_confusion_matrix_value)
+          
+          print ('the fine tuning took: %d(s)' % (end_time - start_time), flush=True)
+          print ("loss: ", loss_value)
+
+          if abs(loss_value - prev_loss) < epsilon:
+            break
+
+          prev_loss = loss_value
+
+
+
+
+
+
+          '''
+
+
+          
+          ###############################################################################
+          # evaluate model every 100 epochs on closure test data, for S ^ Closure(H)
+          # S is predicted value and H is manually annotated value.
+          if (i + 1) % 10 == 0:
+
+            print ("this is from S ^ Closure(H) ")
+
+            # because of limited number of test case, batch size is set to be 1.
+            batch_size = 1
+            
+            s = 0
+            total_correct = 0
+
+            total_confusion_matrix_value = np.zeros((class_num, class_num), int)
+
+            # print ("test size: ", test_size)
+
+            while s < test_size:
+              # skip the last batch for testing data
+              if s + batch_size >= test_size:
+                break
+              e = s + batch_size         
+
+              (batch_sent_embed, batch_event_one_hot,
+               batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label,
+               batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+               batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+              = self.get_batch(closure_test_set, s, e)                    
+              
+              
+              predict, correct, confusion_matrix_value \
+              = sess.run([pred, correct_num, confusion_matrix], \
+                         feed_dict={sent_embed: batch_sent_embed,
+                                    event_one_hot: batch_event_one_hot,
+                                    timex3_one_hot: batch_timex3_one_hot,
+                                    first_entity_bitmap: batch_first_entity_bitmap,
+                                    second_entity_bitmap: batch_second_entity_bitmap,
+                                    # boolean_features : batch_boolean_features,
+                                    is_training: False,
+                                    label: batch_label,
+                                    label0_pos: batch_label0_pos,
+                                    label1_pos: batch_label1_pos,
+                                    label2_pos: batch_label2_pos,
+                                    label3_pos: batch_label3_pos,
+                                    label4_pos: batch_label4_pos,
+                                    label5_pos: batch_label5_pos,
+                                    label6_pos: batch_label6_pos,
+                                    label7_pos: batch_label7_pos,
+                                    label8_pos: batch_label8_pos,
+                                    label9_pos: batch_label9_pos})
+
+              print ("predict: ", predict)
+              
+              total_correct += correct
+              total_confusion_matrix_value += confusion_matrix_value
+              s = e
+
+            print ("confusion matrix: ")
+            print (total_confusion_matrix_value)
+
+
+
+          '''
+
+
+        
+
+
+
+
+        
         #########################################
         # evaluate the trained model on test set
 
-        saver.restore(sess, model_path)
-        print ("Model restored from: %s" % model_path)
+        # saver.restore(sess, model_path)
+        # print ("Model restored from: %s" % model_path)
 
 
         # test_size = 102
@@ -860,6 +1035,9 @@ class ConvNet(object):
         total_correct = 0
 
         total_confusion_matrix_value = np.zeros((class_num, class_num), int)
+
+        # because of limited number of test case, batch size is set to be 1.
+        batch_size = 1
         
         print ("test size: ", test_size)
         
@@ -959,4 +1137,4 @@ class ConvNet(object):
         
 
         # return total_correct / test_size
-        return total_correct / test_size
+        return total_confusion_matrix_value

@@ -12,7 +12,11 @@ import numpy
 import tensorflow as tf
 
 from train_cnn import ConvNet
-from read_file import *
+# from read_file import *
+from read_file import WordEmbedding2
+
+
+from inspect_padding import inspect2
 
 
 
@@ -23,7 +27,7 @@ parser.add_argument('--learning_rate',
                     help='Initial learning rate.')
 parser.add_argument('--num_epochs',
                     type=int,
-                    default=1000, 
+                    default=500, 
                     help='Number of epochs to run trainer.')
 parser.add_argument('--drop_out',
                     type=float,
@@ -47,7 +51,8 @@ parser.add_argument('--hidden_size',
 parser.add_argument('--model_path',
                     type=str,
                     # default='../model/cnn_event_vs_event_ckpt',
-                    default='../model/cnn_event_vs_time.ckpt',
+                    # default='../model/cnn_event_vs_time.ckpt',
+                    default='../model/cnn_event_vs_time_200_epochs.ckpt',
                     # default='../model/cnn.ckpt',
                     help='Path of the trained model')
 parser.add_argument('--embedding_path', 
@@ -134,6 +139,26 @@ def combine_train_and_dev(train_set, dev_set):
     train_set[i] = numpy.concatenate((train_set[i], dev_set[i]))
 
 
+# it creates k fold for cross validation
+def create_k_fold(dataset, k):
+  dataset_size = dataset[0].shape[0]
+
+  k_fold_dev_sets = []
+  k_fold_closure_sets = []
+  for i in range(k):
+    dev_idx_b = int(i / k * dataset_size)
+    dev_idx_e = int((i + 1) / k * dataset_size)
+    k_fold_closure_set = [dataset[0][dev_idx_b:dev_idx_e], dataset[1][dev_idx_b:dev_idx_e], dataset[2][dev_idx_b:dev_idx_e],
+                      dataset[3][dev_idx_b:dev_idx_e], dataset[4][dev_idx_b:dev_idx_e], dataset[5][dev_idx_b:dev_idx_e]]
+    k_fold_dev_set = [numpy.concatenate((dataset[0][:dev_idx_b], dataset[0][dev_idx_e:])), numpy.concatenate((dataset[1][:dev_idx_b], dataset[1][dev_idx_e:])),
+                          numpy.concatenate((dataset[2][:dev_idx_b], dataset[2][dev_idx_e:])), numpy.concatenate((dataset[3][:dev_idx_b], dataset[3][dev_idx_e:])),
+                          numpy.concatenate((dataset[4][:dev_idx_b], dataset[4][dev_idx_e:])), numpy.concatenate((dataset[5][:dev_idx_b], dataset[5][dev_idx_e:]))]
+
+    k_fold_dev_sets.append(k_fold_dev_set)
+    k_fold_closure_sets.append(k_fold_closure_set)
+  return k_fold_dev_sets, k_fold_closure_sets
+  
+    
 
 # ======================================================================
 #  STEP 0: Load pre-trained word embeddings and the SNLI data set
@@ -155,6 +180,9 @@ dev_set   = thyme[1]
 test_set  = thyme[2]
 closure_test_set = thyme[3]
 train_label_count = thyme[4]
+
+
+class_num = 3
 
 # test_after_set = extract_word(test_set, embedding.id_to_word)
 
@@ -229,6 +257,14 @@ train_set = [sent_embed, event_bitmap, timex3_bitmap, first_entity_bitmap, secon
 # train_set = [sent_embed, pos_embed_first_entity, pos_embed_second_entity, event_bitmap, timex3_bitmap, source_bitmap, target_bitmap, label]
 # train_set = [sent_embed, pos_embed_source, pos_embed_target, event_bitmap, timex3_bitmap, label]
 
+k_fold_dev_sets, k_fold_closure_test_sets = create_k_fold(closure_test_set, 5)
+
+# inspect2('/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl', k_fold_dev_sets[3], entire=True)
+# inspect2('/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl', k_fold_closure_test_sets[3], entire=True)
+
+# sys.exit("exit for bugging...")
+
+
 # ======================================================================
 #  STEP 1: Train a baseline model.
 #  This trains a feed forward neural network with one hidden layer.
@@ -252,9 +288,18 @@ if mode == 1:
 
 if mode == 2:
   cnn = ConvNet(2)
-  accuracy = cnn.train_and_evaluate(FLAGS, embedding, train_set, dev_set, test_set, closure_test_set, train_label_count)
-  # accuracy = cnn.train_and_evaluate(FLAGS, embedding, train_set, dev_set, test_after_set)
-  # Output accuracy.
-  print(20 * '*' + 'model 2' + 20 * '*')
-  print('accuracy is %f' % (accuracy))
-  print()
+  # confusion_matrix = cnn.train_and_evaluate(FLAGS, embedding, train_set, dev_set, test_set, closure_test_set, train_label_count)
+  # print(20 * '*' + 'model 2' + 20 * '*')
+  # print('confusion matrix: ')
+  # print(confusion_matrix)
+
+  total_confusion_matrix = numpy.zeros((class_num, class_num), int)
+  
+  for dev_set, test_set in zip(k_fold_dev_sets, k_fold_closure_test_sets):
+    confusion_matrix = cnn.train_and_evaluate(FLAGS, embedding, train_set, dev_set, test_set, closure_test_set, train_label_count)
+    print(20 * '*' + 'model 2' + 20 * '*')
+    print('confusion matrix: ')
+    print(confusion_matrix)
+    total_confusion_matrix += confusion_matrix
+  print('total confusion matrix: ')
+  print(total_confusion_matrix)
