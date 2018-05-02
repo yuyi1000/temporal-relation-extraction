@@ -5,7 +5,7 @@ from nltk.tokenize.punkt import PunktSentenceTokenizer
 from struct import unpack
 from operator import itemgetter
 from copy import deepcopy
-
+from math import floor
 from compares import within, greater, same_length, max_length
 
 from sklearn.utils import shuffle
@@ -188,13 +188,42 @@ class WordEmbedding(object):
 
 class WordEmbedding2:
 
-    def __init__(self, input_file, vocab):
+    def __init__(self, vocab):
         self.word_to_id = {} # word to id map
         self.id_to_word = {} # id to word map
-        self.vectors = self.read_embedding(input_file, vocab)
+        # self.vectors = self.read_embedding(input_file, vocab)
+        self.vectors = self.random_embedding(vocab)
         self.positions = self.get_pos_embedding()
 
 
+    def random_embedding(self, vocab):
+        '''
+        give each token randomized embedding
+        '''
+        
+        wid = 0
+        em_list = []
+
+        # add embedding for the padding word
+        em_list.append(numpy.zeros(300))
+        wid += 1
+
+        # add embedding for XML tags, e.g. <e>, </e>, <t>, </t>. etc
+        wid = self.add_xml_tag(em_list, wid)
+
+        for word in vocab:
+            self.word_to_id[word] = wid
+            self.id_to_word[wid] = word
+            em_list.append(numpy.zeros(300))
+            wid += 1
+
+        # add <unk> token at the end
+        self.word_to_id['<unk>'] = wid
+        self.id_to_word[wid] = '<unk>'
+        em_list.append(numpy.zeros(300))
+            
+        return numpy.asarray(em_list, dtype=numpy.float32)
+        
     # add position embedding
     def get_pos_embedding(self):
         pos_embed = numpy.zeros((1, 15), dtype=numpy.int32)
@@ -283,7 +312,7 @@ class WordEmbedding2:
 #
 
 class THYME(object):
-    def __init__(self, embedding, thyme_data_path, thyme_anno_path, physio_graph_data_path='', physio_graph_anno_path='', full_dataset=False):
+    def __init__(self, embedding, thyme_data_path, thyme_anno_path, physio_graph_data_path='', physio_graph_anno_path='', full_dataset=False, portion=0):
 
         train_data_files = self.collect_id_files(thyme_data_path + '/train/')
 
@@ -328,15 +357,33 @@ class THYME(object):
         ## pattern is used to filter out unwanted sentences.
         pattern = '\[meta|\[start section|\[end section|^\n$'
 
+
+        physio_graph_file = 'patient101_queries.txt'
+        physio_graph_train_part_file = physio_graph_file[:physio_graph_file.rfind('.txt')] + '_' + str(portion) + '_b.txt'
+        physio_graph_test_part_file = physio_graph_file[:physio_graph_file.rfind('.txt')] + '_' + str(portion) + '_a.txt'
+        physio_graph_anno_file = 'patient101_queries.ann'
+        physio_graph_anno_train_part_file = physio_graph_anno_file[:physio_graph_anno_file.rfind('.ann')] + '_' + str(portion) + '_b.ann'
+        physio_graph_anno_test_part_file = physio_graph_anno_file[:physio_graph_anno_file.rfind('.ann')] + '_' + str(portion) + '_a.ann'
         
 
         print ("thyme_data_path: ", thyme_data_path)
         
         if not embedding:
             self.vocab = set()
-            self.collect_vocab(pattern, nlp, thyme_data_path + '/train/', train_data_files)
-            self.collect_vocab(pattern, nlp, thyme_data_path + '/dev/', dev_data_files)
-            self.collect_vocab(pattern, nlp, thyme_data_path + '/test/', test_data_files)
+            if full_dataset:
+                self.collect_vocab(pattern, nlp, thyme_data_path + '/train/', train_data_files)
+                self.collect_vocab(pattern, nlp, thyme_data_path + '/dev/', dev_data_files)
+            else:
+                self.collect_vocab(pattern, nlp, thyme_data_path + '/train/', train_data_files[:4])
+
+                print ("train data test files")
+                print (train_data_files[:4])
+                
+                # self.collect_vocab(pattern, nlp, thyme_data_path + '/dev/', dev_data_files[:3])
+                
+            # self.collect_vocab(pattern, nlp, thyme_data_path + '/test/', test_data_files)
+            self.collect_vocab(pattern, nlp, physio_graph_data_path, [physio_graph_train_part_file])
+            
             
             # print ("vocab length: ", len(self.vocab))
             # print ("vocab: ", self.vocab)
@@ -367,13 +414,22 @@ class THYME(object):
                 #                                test_anno_files, event_vs_event=False, event_vs_time=True)
                 # self.closure_test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
                 #                                        test_anno_files, event_vs_event=False, event_vs_time=True, closure_test_set=True)
-                self.test_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, ['patient101_queries'],
-                                               ['patient101_queries.ann'], event_vs_event=False, event_vs_time=True)
+
+
+                # self.test_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, ['patient101_queries'],
+                #                                ['patient101_queries.ann'], event_vs_event=False, event_vs_time=True)
+
+                self.train2_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, [physio_graph_train_part_file],
+                                               [physio_graph_anno_train_part_file], event_vs_event=False, event_vs_time=True)
+                
+                self.test_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, [physio_graph_test_part_file],
+                                               [physio_graph_anno_test_part_file], event_vs_event=False, event_vs_time=True)
+
                 # self.closure_test_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, ['patient101_queries'],
                 #                                        ['patient101_queries.ann'], event_vs_event=False, event_vs_time=True, closure_test_set=True)
                 self.closure_test_set = deepcopy(self.test_set)
                 self.combine_two_sets(self.train_set, self.dev_set)
-                
+                self.combine_two_sets(self.train_set, self.train2_set)                
 
                 
             ################################
@@ -385,20 +441,49 @@ class THYME(object):
                                               dev_anno_files_test, event_vs_event=False, event_vs_time=True)
                 # self.test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
                 #                                test_anno_files_test, event_vs_event=False, event_vs_time=True)
-                self.test_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, ['patient101_queries'],
-                                               ['patient101_queries.ann'], event_vs_event=False, event_vs_time=True)
+
+                self.train2_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, [physio_graph_train_part_file],
+                                               [physio_graph_anno_train_part_file], event_vs_event=False, event_vs_time=True)
                 
-                self.combine_two_sets(self.train_set, self.dev_set)
+                self.test_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, [physio_graph_test_part_file],
+                                               [physio_graph_anno_test_part_file], event_vs_event=False, event_vs_time=True)
+
+                # self.combine_two_sets(self.train_set, self.dev_set)
+                self.combine_two_sets(self.train_set, self.train2_set)
                 # self.closure_test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/',
                 #                                        test_data_files, test_anno_files_test, event_vs_event=False, event_vs_time=True, closure_test_set=True)
                 self.closure_test_set = deepcopy(self.test_set)
+
+
+
+    def split_dataset(self, dataset, total, select):
+        '''
+        split dataset into two parts
+        the first part starting from select / total * length(dataset), 
+        ending at (select + 1) / total * length(dataset),
+        the second part is comprised of the rest of dataset
+        '''
+        length = len(dataset[0])
+        start = floor(select / total * length)
+        end = floor((select + 1) / total * length)
+        part1, part2 = [], []
+        for i in range(len(dataset)):
+            part1.append(dataset[i][start:end])
+            part2.append(dataset[i][:start] + dataset[i][end:])
+        return part1, part2
+        
+
                 
 
+                
     # combine two sets into the first set
     def combine_two_sets(self, first_set, second_set):
         for i in range(len(first_set)):
             first_set[i] += second_set[i]
-                
+            first_set[i] = shuffle(first_set[i], random_state=0)
+        
+
+            
 
     def find_entity(self, entity_list, id_):
         for entity in entity_list:
@@ -601,6 +686,8 @@ class THYME(object):
     # underlying parser. (outdated)
     # combine token_pos and get_sent_embed functions. uses Stanford NLP tokenizor as
     # default parser.
+    # return value:
+    #   sent embed: convert each word into its id by looking up table word_to_id
     def get_token_pos_and_embed(self, nlp, text, begin_pos):
         sent_tokens = []
         sent_embed = []
@@ -611,17 +698,23 @@ class THYME(object):
             # will be split into three token 'CT', '-' and 'scan'.
             word = token['originalText']
 
-            if word.find('-') != -1:
-                words = re.split('(-)', word)
-                offset = 0
-                for w in words:
-                    begin = begin_pos + token['characterOffsetBegin'] + offset
-                    sent_tokens.append((begin, begin + len(w)))
-                    self.append_word_to_sent_embed(sent_embed, w)
-                    offset += len(w)
-            else: 
-                sent_tokens.append((begin_pos + token['characterOffsetBegin'], begin_pos + token['characterOffsetEnd']))
-                self.append_word_to_sent_embed(sent_embed, word)
+            # if word.find('-') != -1:
+            #     words = re.split('(-)', word)
+            #     offset = 0
+            #     for w in words:
+            #         begin = begin_pos + token['characterOffsetBegin'] + offset
+            #         sent_tokens.append((begin, begin + len(w)))
+            #         self.append_word_to_sent_embed(sent_embed, w)
+            #         offset += len(w)
+            # else: 
+            #     sent_tokens.append((begin_pos + token['characterOffsetBegin'], begin_pos + token['characterOffsetEnd']))
+            #     self.append_word_to_sent_embed(sent_embed, word)
+
+            sent_tokens.append((begin_pos + token['characterOffsetBegin'], begin_pos + token['characterOffsetEnd']))
+            self.append_word_to_sent_embed(sent_embed, word)
+
+
+                
         self.max_sent_len = max(self.max_sent_len, len(sent_embed))
         return sent_tokens, sent_embed
 
@@ -1086,17 +1179,17 @@ class THYME(object):
         #         source_one_hot_list_p, target_one_hot_list_p, numpy.asarray(data_set[7], dtype=numpy.int32)]
 
         data = [sent_embed_list_p, event_one_hot_list_p, timex3_one_hot_list_p, source_one_hot_list_p,
-                target_one_hot_list_p, numpy.asarray(data_set[5], dtype=numpy.int32)]
+                target_one_hot_list_p, numpy.asarray(data_set[5], dtype=numpy.int32), numpy.asarray(data_set[6], dtype=numpy.int32)]
 
         
         # data = [sent_embed_list_p, pos_source_embed_list_p, pos_target_embed_list_p, event_one_hot_list_p, timex3_one_hot_list_p,
         #         numpy.asarray(data_set[5], dtype=numpy.int32)]
         
         # data_shuffle = shuffle(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8])
-        data_shuffle = shuffle(data[0], data[1], data[2], data[3], data[4], data[5])
+        # data_shuffle = shuffle(data[0], data[1], data[2], data[3], data[4], data[5], data[6])
         
-        # return data
-        return data_shuffle
+        return data
+        # return data_shuffle
         
     def create_padding_set(self):
 
@@ -1124,19 +1217,33 @@ class THYME(object):
         # return train_set
     
 
+    def calculate_dataset_size(self, is_thyme_list):
+        '''
+        calculate the number of thyme and physiograph relations in the dataset, respectively.
+        '''
+
+        # print ("is thyme list: ")
+        # print (is_thyme_list)
+        
+        thyme_count = numpy.count_nonzero(is_thyme_list)
+        physiograph_count = len(is_thyme_list) - thyme_count
+        return thyme_count, physiograph_count
+    
+    
+        
 
     # calculate the total number of each label
     def calculate_label_total(self, label_list):
         label0_count = 0
         label1_count = 0
         label2_count = 0
-        label3_count = 0
-        label4_count = 0
-        label5_count = 0
-        label6_count = 0
-        label7_count = 0
-        label8_count = 0
-        label9_count = 0
+        # label3_count = 0
+        # label4_count = 0
+        # label5_count = 0
+        # label6_count = 0
+        # label7_count = 0
+        # label8_count = 0
+        # label9_count = 0
 
         for label in label_list:
             if label == 0:
@@ -1145,34 +1252,34 @@ class THYME(object):
                 label1_count += 1
             elif label == 2:
                 label2_count += 1
-            elif label == 3:
-                label3_count += 1
-            elif label == 4:
-                label4_count += 1
-            elif label == 5:
-                label5_count += 1                
-            elif label == 6:
-                label6_count += 1                
-            elif label == 7:
-                label7_count += 1                
-            elif label == 8:
-                label8_count += 1                
-            elif label == 9:
-                label9_count += 1                
+            # elif label == 3:
+            #     label3_count += 1
+            # elif label == 4:
+            #     label4_count += 1
+            # elif label == 5:
+            #     label5_count += 1                
+            # elif label == 6:
+            #     label6_count += 1                
+            # elif label == 7:
+            #     label7_count += 1                
+            # elif label == 8:
+            #     label8_count += 1                
+            # elif label == 9:
+            #     label9_count += 1                
                 
         print ("number of label 0 is: ", label0_count)
         print ("number of label 1 is: ", label1_count)
         print ("number of label 2 is: ", label2_count)
-        print ("number of label 3 is: ", label3_count)
-        print ("number of label 4 is: ", label4_count)
-        print ("number of label 5 is: ", label5_count)
-        print ("number of label 6 is: ", label6_count)
-        print ("number of label 7 is: ", label7_count)
-        print ("number of label 8 is: ", label8_count)
-        print ("number of label 9 is: ", label9_count)
+        # print ("number of label 3 is: ", label3_count)
+        # print ("number of label 4 is: ", label4_count)
+        # print ("number of label 5 is: ", label5_count)
+        # print ("number of label 6 is: ", label6_count)
+        # print ("number of label 7 is: ", label7_count)
+        # print ("number of label 8 is: ", label8_count)
+        # print ("number of label 9 is: ", label9_count)
 
-        return [label0_count, label1_count, label2_count, label3_count, label4_count, label5_count, label6_count, label7_count, label8_count, label9_count]
-        
+        # return [label0_count, label1_count, label2_count, label3_count, label4_count, label5_count, label6_count, label7_count, label8_count, label9_count]
+        return [label0_count, label1_count, label2_count]
 
     # given an input, say [0, 0, 0, 0, 1, 0, 0]
     # return [-4, -3, -2, -1, 0, 1, 2] + 8
@@ -1374,10 +1481,18 @@ class THYME(object):
             # anno_file is the name of annotation file
             one_file = anno_file[:anno_file.find('.')]
 
+            is_thyme = False
+            if anno_path.find('thyme') != -1:
+                is_thyme = True
+
+            
             print('data path: ', data_path)
             print('one file: ', one_file)
-            file_content = open(join(data_path, one_file)).read()
-
+            if is_thyme:
+                file_content = open(join(data_path, one_file)).read()
+            else:
+                file_content = open(join(data_path, one_file + '.txt')).read()
+                
             # sent_token_list is a list of sentence with its character offset for each token.
             # E.g. "Hello world. See you." will be represented as
             # [[(0, 5), (6, 11), (11, 12)], [(13, 16), (17, 20), (20, 21)]]
@@ -1393,8 +1508,10 @@ class THYME(object):
             # print ("line of output buffer", output_buffer.count('\n'))
             
             # sent_list = self.collect_sent(data_path + one_file)
-            
-            sent_list = self.collect_sent(nlp, pattern, data_path + one_file)
+            if is_thyme:
+                sent_list = self.collect_sent(nlp, pattern, data_path + one_file)
+            else:
+                sent_list = self.collect_sent(nlp, pattern, data_path + one_file + '.txt')                
 
             print ("sent list length: ", len(sent_list))
 
@@ -1432,6 +1549,7 @@ class THYME(object):
             timex3_token_one_hot_list = []
             print ("anno file: ", anno_file)
 
+            
             if anno_path.find('thyme') != -1:
                 event_list, timex3_list, tlink_list = self.collect_thyme_anno(anno_path + anno_file, event_vs_event, event_vs_time)
             else:
@@ -1506,6 +1624,8 @@ class THYME(object):
             
             boolean_features_list_r = []
             label_list_r = []
+
+            is_thyme_list_r = []
 
             for tlink in tlink_struct_aug_list:
                 index = tlink[5]
@@ -1588,7 +1708,7 @@ class THYME(object):
                 boolean_features_list_r.append(boolean_features)
                 label_list_r.append(label_r)
 
-
+                is_thyme_list_r.append(is_thyme)
 
                 
             # one_file_list_r = [sent_embed_list_r, pos_embed_source_list_r, pos_embed_target_list_r, event_one_hot_list_r, timex3_one_hot_list_r,
@@ -1608,7 +1728,8 @@ class THYME(object):
             
             # one_file_list_r = [sent_embed_list_r, event_one_hot_list_r, timex3_one_hot_list_r, source_one_hot_list_r, target_one_hot_list_r, label_list_r]
             
-            one_file_list_r = [sent_embed_list_r, event_one_hot_list_r, timex3_one_hot_list_r, first_entity_bitmap_list_r, second_entity_bitmap_list_r, label_list_r]
+            one_file_list_r = [sent_embed_list_r, event_one_hot_list_r, timex3_one_hot_list_r,
+                               first_entity_bitmap_list_r, second_entity_bitmap_list_r, label_list_r, is_thyme_list_r]
             
             # one_file_list_r = [sent_embed_list_r, pos_embed_first_entity_list_r, pos_embed_second_entity_list_r, event_one_hot_list_r, timex3_one_hot_list_r,
             #                    source_one_hot_list_r, target_one_hot_list_r, label_list_r]
@@ -1629,7 +1750,8 @@ class THYME(object):
                 #                     all_files_list_r[6] + one_file_list_r[6], all_files_list_r[7] + one_file_list_r[7]]
 
                 all_files_list_r = [all_files_list_r[0] + one_file_list_r[0], all_files_list_r[1] + one_file_list_r[1], all_files_list_r[2] + one_file_list_r[2],
-                                    all_files_list_r[3] + one_file_list_r[3], all_files_list_r[4] + one_file_list_r[4], all_files_list_r[5] + one_file_list_r[5]]
+                                    all_files_list_r[3] + one_file_list_r[3], all_files_list_r[4] + one_file_list_r[4], all_files_list_r[5] + one_file_list_r[5],
+                                    all_files_list_r[6] + one_file_list_r[6]]
 
 
         output_file_name = self.get_output_file_name(data_path, closure_test_set)
@@ -1642,8 +1764,11 @@ class THYME(object):
 
         # with open(output_file_name, 'w') as f:
         #     f.write(output_buffer)
-                
-        return all_files_list_r
+
+        all_files_list_r_shuffle = shuffle(all_files_list_r[0], all_files_list_r[1], all_files_list_r[2],
+                                           all_files_list_r[3], all_files_list_r[4], all_files_list_r[5], all_files_list_r[6])
+
+        return all_files_list_r_shuffle
 
 
 
@@ -1742,13 +1867,14 @@ class THYME(object):
                             # separate hyphened word. e.g. one token 'CT-scan'
                             # will be split into three token 'CT', '-' and 'scan'.
                             word = token['originalText']
-                            if word.find('-') != -1:
-                                words = re.split('(-)', word)
-                                for w in words:
-                                    self.vocab.add(w)
-                            else:
-                                self.vocab.add(word)    
+                            # if word.find('-') != -1:
+                            #     words = re.split('(-)', word)
+                            #     for w in words:
+                            #         self.vocab.add(w)
+                            # else:
+                            #     self.vocab.add(word)    
 
+                            self.vocab.add(word)
 
 def main():
 
@@ -1761,59 +1887,71 @@ def main():
 
     physio_graph_data_path = '/home/yuyi/workspace/brat-v1.3_Crunchy_Frog/data/queries/patient101/'
     physio_graph_anno_path = '/home/yuyi/workspace/brat-v1.3_Crunchy_Frog/data/queries/patient101/'
-    
-    # thyme = THYME(None, thyme_data_path, thyme_anno_path)
-    # word_emb_path = '/home/yuyi/cs6890/hw06/snli/GoogleNews-vectors-negative300.bin'
-    # embedding = WordEmbedding(word_emb_path, thyme.vocab)
 
-    # word_emb_path = '/home/yuyi/models/glove.840B.300d.txt'
-    # embedding = WordEmbedding2(word_emb_path, thyme.vocab)
-
-    embedding_path = '/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl'
-    # embedding_path = '/home/yuyi/cs6890/project/data/embedding_without_xml_tag.pkl'
-    # pickle.dump(embedding, open(embedding_path, 'wb'))
-
-
-    embedding = pickle.load(open(embedding_path, 'rb'))
+    # k = 1
+    k = 5
+    for i in range(k):
     
-    # thyme = THYME(embedding, thyme_data_path, thyme_anno_path, full_dataset = is_full_dataset)
-    thyme = THYME(embedding, thyme_data_path, thyme_anno_path, physio_graph_data_path=physio_graph_data_path, physio_graph_anno_path=physio_graph_anno_path, full_dataset=is_full_dataset)
-    print ("thyme: ", thyme)
-    
-    train_set, dev_set, test_set, closure_test_set = thyme.create_padding_set()
+        thyme = THYME(None, thyme_data_path, thyme_anno_path, physio_graph_data_path=physio_graph_data_path, physio_graph_anno_path=physio_graph_anno_path, full_dataset=is_full_dataset, portion=i)
 
-    # train_set = thyme.create_padding_set()
-    
-    print ("train set label statistics.....")
-    train_label_count = thyme.calculate_label_total(train_set[-1])
-    print ("dev set label statistics.....")
-    dev_label_count = thyme.calculate_label_total(dev_set[-1])    
-    print ("test set label statistics.....")
-    test_label_count = thyme.calculate_label_total(test_set[-1])
-    print ("closure test set label statistics.....")
-    closure_test_label_count = thyme.calculate_label_total(closure_test_set[-1])
-    
-    if is_full_dataset:
-        # padding_data_path = '/home/yuyi/cs6890/project/data/padding.pkl'
-        # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_event.pkl'
-        padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag.pkl'
-        # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_without_xml_tag.pkl'
-        # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_without_xml_tag_pos_embed_source.pkl'
-        pickle.dump([train_set, dev_set, test_set, closure_test_set, train_label_count], open(padding_data_path, 'wb'))
+        # word_emb_path = '/home/yuyi/models/glove.840B.300d.txt'
+        # embedding = WordEmbedding2(word_emb_path, thyme.vocab)
+        # Now it just uses randomized embedding
+        embedding = WordEmbedding2(thyme.vocab)
         
-    else:
-    
-        # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test.pkl'
-        # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_event.pkl'
-        padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_with_xml_tag.pkl'
-        # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_without_xml_tag.pkl'
-        # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_without_xml_tag_pos_embed_source.pkl'
-        pickle.dump([train_set, dev_set, test_set, closure_test_set, train_label_count], open(padding_data_test_path, 'wb'))
+        embedding_path = '/home/yuyi/cs6890/project/data/embedding_with_xml_tag_' + str(i) + '.pkl'
+        # embedding_path = '/home/yuyi/cs6890/project/data/embedding_test_with_xml_tag_' + str(i) + '.pkl'
+        # embedding_path = '/home/yuyi/cs6890/project/data/embedding_without_xml_tag.pkl'
+        pickle.dump(embedding, open(embedding_path, 'wb'))
 
 
-    # print ("train_set[0] length: ", len(train_set[0]))
-    # print ("train_set[0]: ", train_set[0])
+        embedding = pickle.load(open(embedding_path, 'rb'))
 
+        
+        thyme = THYME(embedding, thyme_data_path, thyme_anno_path, physio_graph_data_path=physio_graph_data_path, physio_graph_anno_path=physio_graph_anno_path, full_dataset=is_full_dataset, portion=i)
+        print ("thyme: ", thyme)
+
+        train_set, dev_set, test_set, closure_test_set = thyme.create_padding_set()
+
+        # train_set = thyme.create_padding_set()
+
+        print ("train set label statistics.....")
+        train_label_count = thyme.calculate_label_total(train_set[-2])
+        print ("dev set label statistics.....")
+        dev_label_count = thyme.calculate_label_total(dev_set[-2])    
+        print ("test set label statistics.....")
+        test_label_count = thyme.calculate_label_total(test_set[-2])
+        print ("closure test set label statistics.....")
+        closure_test_label_count = thyme.calculate_label_total(closure_test_set[-2])
+
+        train_dataset_size = thyme.calculate_dataset_size(train_set[-1])
+        print ("train dataset size: ", train_dataset_size)
+
+        test_dataset_size = thyme.calculate_dataset_size(test_set[-1])
+        print ("test dataset size: ", test_dataset_size)
+        
+
+        if is_full_dataset:
+            # padding_data_path = '/home/yuyi/cs6890/project/data/padding.pkl'
+            # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_event.pkl'
+            padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag_' + str(i) + '.pkl'
+            # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_without_xml_tag.pkl'
+            # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_without_xml_tag_pos_embed_source.pkl'
+            # pickle.dump([train_set, dev_set, test_set, closure_test_set, train_label_count], open(padding_data_path, 'wb'))
+            pickle.dump([train_set, dev_set, test_set, closure_test_set, train_dataset_size], open(padding_data_path, 'wb'))
+
+        else:
+
+            # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test.pkl'
+            # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_event.pkl'
+            padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_with_xml_tag_' + str(i) + '.pkl'
+            # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_without_xml_tag.pkl'
+            # pickle.dump([train_set, dev_set, test_set, closure_test_set, train_label_count], open(padding_data_test_path, 'wb'))
+            pickle.dump([train_set, dev_set, test_set, closure_test_set, train_dataset_size], open(padding_data_test_path, 'wb'))
+
+        # print ("train_set[0] length: ", len(train_set[0]))
+        # print ("train_set[0]: ", train_set[0])
+        
 
 if __name__ == '__main__':
     main()    

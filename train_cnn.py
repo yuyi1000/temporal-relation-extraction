@@ -126,34 +126,46 @@ class ConvNet(object):
     # label = data_set[8]
     label = data_set[5]
     # label = data_set[5]
+
+    is_thyme = data_set[6]
+
+    # position of is_thyme in the batch data
+    # similar to label0_pos, label1_pos, etc.
+    thyme_pos, physio_pos = [], []
     
     # positions of each label in the batch data
     # these positions are used for calculating normalized cross entropy.
-    label0_pos, label1_pos, label2_pos, label3_pos, label4_pos, label5_pos, label6_pos, label7_pos, label8_pos, label9_pos = [], [], [], [], [], [], [], [], [], []
+    # label0_pos, label1_pos, label2_pos, label3_pos, label4_pos, label5_pos, label6_pos, label7_pos, label8_pos, label9_pos = [], [], [], [], [], [], [], [], [], []
+
+    # for i in range(s, e):
+    #   if label[i] == 0:
+    #     label0_pos.append(i - s)
+    #   elif label[i] == 1:
+    #     label1_pos.append(i - s)
+    #   elif label[i] == 2:
+    #     label2_pos.append(i - s)
+    #   elif label[i] == 3:
+    #     label3_pos.append(i - s)
+    #   elif label[i] == 4:
+    #     label4_pos.append(i - s)
+    #   elif label[i] == 5:
+    #     label5_pos.append(i - s)
+    #   elif label[i] == 6:
+    #     label6_pos.append(i - s)
+    #   elif label[i] == 7:
+    #     label7_pos.append(i - s)
+    #   elif label[i] == 8:
+    #     label8_pos.append(i - s)
+    #   elif label[i] == 9:
+    #     label9_pos.append(i - s)
 
     for i in range(s, e):
-      if label[i] == 0:
-        label0_pos.append(i - s)
-      elif label[i] == 1:
-        label1_pos.append(i - s)
-      elif label[i] == 2:
-        label2_pos.append(i - s)
-      elif label[i] == 3:
-        label3_pos.append(i - s)
-      elif label[i] == 4:
-        label4_pos.append(i - s)
-      elif label[i] == 5:
-        label5_pos.append(i - s)
-      elif label[i] == 6:
-        label6_pos.append(i - s)
-      elif label[i] == 7:
-        label7_pos.append(i - s)
-      elif label[i] == 8:
-        label8_pos.append(i - s)
-      elif label[i] == 9:
-        label9_pos.append(i - s)
-
+      if is_thyme[i]:
+        thyme_pos.append(i - s)
+      else:
+        physio_pos.append(i - s)
         
+    
     # return sent_embed[s:e], pos_embed_first_entity[s:e], pos_embed_second_entity[s:e], event_one_hot[s:e], \
     #   timex3_one_hot[s:e], source_one_hot[s:e], target_one_hot[s:e], boolean_features[s:e], label[s:e], \
     #   label0_pos, label1_pos, label2_pos, label3_pos, label4_pos, label5_pos, label6_pos, label7_pos, label8_pos, label9_pos
@@ -162,10 +174,13 @@ class ConvNet(object):
     #   timex3_one_hot[s:e], source_one_hot[s:e], target_one_hot[s:e], label[s:e], \
     #   label0_pos, label1_pos, label2_pos, label3_pos, label4_pos, label5_pos, label6_pos, label7_pos, label8_pos, label9_pos
 
-    return sent_embed[s:e], event_one_hot[s:e], \
-      timex3_one_hot[s:e], first_entity_bitmap[s:e], second_entity_bitmap[s:e], label[s:e], \
-      label0_pos, label1_pos, label2_pos, label3_pos, label4_pos, label5_pos, label6_pos, label7_pos, label8_pos, label9_pos
+    # return sent_embed[s:e], event_one_hot[s:e], \
+    #   timex3_one_hot[s:e], first_entity_bitmap[s:e], second_entity_bitmap[s:e], label[s:e], \
+    #   label0_pos, label1_pos, label2_pos, label3_pos, label4_pos, label5_pos, label6_pos, label7_pos, label8_pos, label9_pos
 
+    return sent_embed[s:e], event_one_hot[s:e], \
+      timex3_one_hot[s:e], first_entity_bitmap[s:e], second_entity_bitmap[s:e], label[s:e], thyme_pos, physio_pos
+  
   
     # return sent_embed[s:e], pos_embed_first_entity[s:e], pos_embed_second_entity[s:e], event_one_hot[s:e], \
     #   timex3_one_hot[s:e], label[s:e], \
@@ -279,7 +294,8 @@ class ConvNet(object):
       
   
   
-  def train_and_evaluate(self, FLAGS, embedding, train_set, dev_set, test_set, closure_test_set, train_label_count):
+  # def train_and_evaluate(self, FLAGS, embedding, train_set, dev_set, test_set, closure_test_set, train_label_count):
+  def train_and_evaluate(self, FLAGS, embedding, train_set, dev_set, test_set, closure_test_set, train_dataset_size):
     class_num     = 3
     num_epochs    = FLAGS.num_epochs
     batch_size    = FLAGS.batch_size
@@ -304,7 +320,9 @@ class ConvNet(object):
     # max length of input sequence
     max_sent_len = train_set[0].shape[1]
 
-    label0_count, label1_count, label2_count, label3_count, label4_count, label5_count, label6_count, label7_count, label8_count, label9_count = train_label_count
+    # label0_count, label1_count, label2_count, label3_count, label4_count, label5_count, label6_count, label7_count, label8_count, label9_count = train_label_count
+    thyme_count, physio_count = train_dataset_size
+
     
     print ("train_set type: ", type(train_set))
     print ("train_set length: ", len(train_set))
@@ -321,8 +339,8 @@ class ConvNet(object):
     
     dev_size = dev_set[0].shape[0]
     test_size = test_set[0].shape[0]
-
-
+    
+    print ("test size: ", test_size)
     
     with tf.Graph().as_default():
       # input data
@@ -343,16 +361,19 @@ class ConvNet(object):
         
         label = tf.placeholder(tf.int32, [None]) 
 
-        label0_pos = tf.placeholder(tf.int32, [None])
-        label1_pos = tf.placeholder(tf.int32, [None])
-        label2_pos = tf.placeholder(tf.int32, [None])
-        label3_pos = tf.placeholder(tf.int32, [None])
-        label4_pos = tf.placeholder(tf.int32, [None])
-        label5_pos = tf.placeholder(tf.int32, [None])
-        label6_pos = tf.placeholder(tf.int32, [None])
-        label7_pos = tf.placeholder(tf.int32, [None])
-        label8_pos = tf.placeholder(tf.int32, [None])
-        label9_pos = tf.placeholder(tf.int32, [None])
+        # label0_pos = tf.placeholder(tf.int32, [None])
+        # label1_pos = tf.placeholder(tf.int32, [None])
+        # label2_pos = tf.placeholder(tf.int32, [None])
+        # label3_pos = tf.placeholder(tf.int32, [None])
+        # label4_pos = tf.placeholder(tf.int32, [None])
+        # label5_pos = tf.placeholder(tf.int32, [None])
+        # label6_pos = tf.placeholder(tf.int32, [None])
+        # label7_pos = tf.placeholder(tf.int32, [None])
+        # label8_pos = tf.placeholder(tf.int32, [None])
+        # label9_pos = tf.placeholder(tf.int32, [None])
+
+        thyme_pos = tf.placeholder(tf.int32, [None])
+        physio_pos = tf.placeholder(tf.int32, [None])
         
       # init embedding matrix
       # word_embedding = tf.get_variable(name="word_embedding", shape=vectors.shape, 
@@ -435,7 +456,7 @@ class ConvNet(object):
       loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label, logits=logits))
 
       
-      # cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label, logits=logits)
+      cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label, logits=logits)
       # loss0 = tf.reduce_sum(tf.gather(cross_entropy, label0_pos)) / label0_count
       # loss1 = tf.reduce_sum(tf.gather(cross_entropy, label1_pos)) / label1_count
       # loss2 = tf.reduce_sum(tf.gather(cross_entropy, label2_pos)) / label2_count
@@ -447,8 +468,13 @@ class ConvNet(object):
       # loss8 = tf.reduce_sum(tf.gather(cross_entropy, label8_pos)) / label8_count
       # loss9 = tf.reduce_sum(tf.gather(cross_entropy, label9_pos)) / label9_count
 
+      loss_thyme = tf.reduce_sum(tf.gather(cross_entropy, thyme_pos)) / thyme_count
+      loss_physio = tf.reduce_sum(tf.gather(cross_entropy, physio_pos)) / physio_count
+      
       # loss = loss0 + loss1 + loss2 + loss3 + loss4 + loss5 + loss6 + loss7 + loss8 + loss9 + decay * tf.nn.l2_loss(dense_kernel)
       # print ("loss shape: ", loss.get_shape())
+
+      loss = loss_thyme + loss_physio
       
       tf.summary.scalar("loss", loss)
 
@@ -500,11 +526,15 @@ class ConvNet(object):
 
 
 
-        '''
+        
         
         #############################
         # traing the model
 
+        epsilon = 1e-6
+        repeat = 3
+        prev_loss = 0
+        
         for i in range(num_epochs):
           print(20 * '*', 'epoch', i+1, 20 * '*')
 
@@ -535,11 +565,17 @@ class ConvNet(object):
             #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
             # = self.get_batch(train_set, s, e)
 
-            (batch_sent_embed, batch_event_one_hot,
-             batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label,
-             batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
-             batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+            # (batch_sent_embed, batch_event_one_hot,
+            #  batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label,
+            #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+            #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+            # = self.get_batch(train_set, s, e)
+
+            
+            (batch_sent_embed, batch_event_one_hot, batch_timex3_one_hot, batch_first_entity_bitmap,
+             batch_second_entity_bitmap, batch_label, batch_thyme_pos, batch_physio_pos) \
             = self.get_batch(train_set, s, e)
+            
 
             
             # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
@@ -570,15 +606,17 @@ class ConvNet(object):
                                   # boolean_features : batch_boolean_features,
                                   is_training: True,
                                   label: batch_label,
-                                  label1_pos: batch_label1_pos,
-                                  label2_pos: batch_label2_pos,
-                                  label3_pos: batch_label3_pos,
-                                  label4_pos: batch_label4_pos,
-                                  label5_pos: batch_label5_pos,
-                                  label6_pos: batch_label6_pos,
-                                  label7_pos: batch_label7_pos,
-                                  label8_pos: batch_label8_pos,
-                                  label9_pos: batch_label9_pos})
+                                  thyme_pos: batch_thyme_pos,
+                                  physio_pos: batch_physio_pos})
+                                  # label1_pos: batch_label1_pos,
+                                  # label2_pos: batch_label2_pos,
+                                  # label3_pos: batch_label3_pos,
+                                  # label4_pos: batch_label4_pos,
+                                  # label5_pos: batch_label5_pos,
+                                  # label6_pos: batch_label6_pos,
+                                  # label7_pos: batch_label7_pos,
+                                  # label8_pos: batch_label8_pos,
+                                  # label9_pos: batch_label9_pos})
 
             # print ("s: ", s, ", e: ", e)
             # print ("loss: ", loss_value)
@@ -595,7 +633,18 @@ class ConvNet(object):
           print ('the training took: %d(s)' % (end_time - start_time), flush=True)
           print ("loss: ", loss_value)
 
+          if abs(loss_value - prev_loss) < epsilon:
+            repeat -= 1
+            if repeat == 0:
+              break
+          else:
+            repeat = 3
 
+          prev_loss = loss_value
+             
+
+          '''
+             
           ####################################################
           # evaluate model every 100 epochs on train data
           if (i + 1) % 100 == 0:
@@ -675,6 +724,8 @@ class ConvNet(object):
             # print ("precision2: ", precision2_value)
             # print ("recall2: ", recall2_value)
             # print ("f1 measure: ", f1_value)
+
+          '''
           
           #######################################################################
           # evaluate model every 100 epochs on test data, for Closure(S) ^ H
@@ -809,11 +860,16 @@ class ConvNet(object):
               #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
               # = self.get_batch(closure_test_set, s, e)              
 
-              (batch_sent_embed, batch_event_one_hot,
-               batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label,
-               batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
-               batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
-              = self.get_batch(closure_test_set, s, e)              
+              # (batch_sent_embed, batch_event_one_hot,
+              #  batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label,
+              #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+              #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+              # = self.get_batch(closure_test_set, s, e)              
+
+              (batch_sent_embed, batch_event_one_hot, batch_timex3_one_hot, batch_first_entity_bitmap,
+               batch_second_entity_bitmap, batch_label, batch_thyme_pos, batch_physio_pos) \
+              = self.get_batch(test_set, s, e)
+
 
               
               # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot,
@@ -833,16 +889,18 @@ class ConvNet(object):
                                     # boolean_features : batch_boolean_features,
                                     is_training: False,
                                     label: batch_label,
-                                    label0_pos: batch_label0_pos,
-                                    label1_pos: batch_label1_pos,
-                                    label2_pos: batch_label2_pos,
-                                    label3_pos: batch_label3_pos,
-                                    label4_pos: batch_label4_pos,
-                                    label5_pos: batch_label5_pos,
-                                    label6_pos: batch_label6_pos,
-                                    label7_pos: batch_label7_pos,
-                                    label8_pos: batch_label8_pos,
-                                    label9_pos: batch_label9_pos})
+                                    thyme_pos: batch_thyme_pos,
+                                    physio_pos: batch_physio_pos})
+                                    # label0_pos: batch_label0_pos,
+                                    # label1_pos: batch_label1_pos,
+                                    # label2_pos: batch_label2_pos,
+                                    # label3_pos: batch_label3_pos,
+                                    # label4_pos: batch_label4_pos,
+                                    # label5_pos: batch_label5_pos,
+                                    # label6_pos: batch_label6_pos,
+                                    # label7_pos: batch_label7_pos,
+                                    # label8_pos: batch_label8_pos,
+                                    # label9_pos: batch_label9_pos})
 
               print ("predict: ", predict)
               
@@ -873,13 +931,14 @@ class ConvNet(object):
         saver.restore(sess, model_path)
 
 
-
+        
         
         
         ###################################################
         # fine tuning trained model on validation dataset
 
         epsilon = 1e-8
+        repeat = 3
         prev_loss = 0
 
 
@@ -938,7 +997,11 @@ class ConvNet(object):
           print ("loss: ", loss_value)
 
           if abs(loss_value - prev_loss) < epsilon:
-            break
+            repeat -= 1
+            if repeat == 0:
+              break
+          else:
+            repeat = 3
 
           prev_loss = loss_value
 
@@ -946,8 +1009,8 @@ class ConvNet(object):
 
 
 
-
-          '''
+          
+          
 
 
           
@@ -969,9 +1032,6 @@ class ConvNet(object):
             # print ("test size: ", test_size)
 
             while s < test_size:
-              # skip the last batch for testing data
-              if s + batch_size >= test_size:
-                break
               e = s + batch_size         
 
               (batch_sent_embed, batch_event_one_hot,
@@ -1029,8 +1089,6 @@ class ConvNet(object):
         # print ("Model restored from: %s" % model_path)
 
 
-        # test_size = 102
-        
         s = 0
         total_correct = 0
 
@@ -1042,9 +1100,7 @@ class ConvNet(object):
         print ("test size: ", test_size)
         
         while s < test_size:
-          # skip the last batch for testing data
-          if s + batch_size >= test_size:
-            break
+          
           e = s + batch_size
 
 
@@ -1060,12 +1116,17 @@ class ConvNet(object):
           #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
           # = self.get_batch(test_set, s, e)          
 
+          # (batch_sent_embed, batch_event_one_hot, \
+          #  batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label, \
+          #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+          #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+          # = self.get_batch(test_set, s, e)          
+
           (batch_sent_embed, batch_event_one_hot, \
-           batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label, \
-           batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
-           batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+           batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label, batch_thyme_pos, batch_physio_pos) \
           = self.get_batch(test_set, s, e)          
 
+             
           
           # (batch_sent_embed, batch_pos_source, batch_pos_target, batch_event_one_hot, \
           #  batch_timex3_one_hot, batch_label, \
@@ -1084,16 +1145,18 @@ class ConvNet(object):
                                 # boolean_features : batch_boolean_features,
                                 is_training: False,
                                 label: batch_label,
-                                label0_pos: batch_label0_pos,
-                                label1_pos: batch_label1_pos,
-                                label2_pos: batch_label2_pos,
-                                label3_pos: batch_label3_pos,
-                                label4_pos: batch_label4_pos,
-                                label5_pos: batch_label5_pos,
-                                label6_pos: batch_label6_pos,
-                                label7_pos: batch_label7_pos,
-                                label8_pos: batch_label8_pos,
-                                label9_pos: batch_label9_pos})
+                                thyme_pos: batch_thyme_pos,
+                                physio_pos: batch_physio_pos})
+                                # label0_pos: batch_label0_pos,
+                                # label1_pos: batch_label1_pos,
+                                # label2_pos: batch_label2_pos,
+                                # label3_pos: batch_label3_pos,
+                                # label4_pos: batch_label4_pos,
+                                # label5_pos: batch_label5_pos,
+                                # label6_pos: batch_label6_pos,
+                                # label7_pos: batch_label7_pos,
+                                # label8_pos: batch_label8_pos,
+                                # label9_pos: batch_label9_pos})
           
 
 

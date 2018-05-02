@@ -42,6 +42,7 @@ def inspect2(embedding_file,  data, entire=False):
         
         label = data[5][i]
 
+        is_thyme = data[6][i]
         
         sentence = ''
         event = ''
@@ -95,6 +96,8 @@ def inspect2(embedding_file,  data, entire=False):
         print ("second entity: ", second_entity)
         
         print ("label: ", label)
+        print ("is thyme: ", is_thyme)
+        
         # print ("raw event bitmap: ", event_bitmap)
         # print ("raw timex3 bitmap: ", timex3_bitmap)
         # print ("raw source bitmap: ", source_bitmap)
@@ -117,16 +120,28 @@ def inspect(embedding_file, padding_file, entire=False):
     pad = pickle.load(open(padding_file, 'rb'))
 
     # training data
-    # data = pad[0]
+    data = pad[0]
 
     # testing data
-    data = pad[2]
+    # data = pad[2]
 
-    # label count
+    # closure testing data
+    # data = pad[3]
+    
+
+    label_count = {}
+    
+    # label count for training data
+    # count = pad[4]
+    # for i in range(3):
+    #     print ("label " + str(i) + ": " + str(count[i]))
+
+    # dataset count for training data
     count = pad[4]
-
-    for i in range(10):
+    for i in range(2):
         print ("label " + str(i) + ": " + str(count[i]))
+
+    
     
     if entire:
         id_list = [i for i in range(len(data[0]))]
@@ -158,6 +173,9 @@ def inspect(embedding_file, padding_file, entire=False):
         
         label = data[5][i]
 
+        is_thyme = data[6][i]
+
+        label_count[label] = label_count.get(label, 0) + 1
         
         sentence = ''
         event = ''
@@ -211,6 +229,8 @@ def inspect(embedding_file, padding_file, entire=False):
         print ("second entity: ", second_entity)
         
         print ("label: ", label)
+
+        print ("is thyme: ", is_thyme)
         # print ("raw event bitmap: ", event_bitmap)
         # print ("raw timex3 bitmap: ", timex3_bitmap)
         # print ("raw source bitmap: ", source_bitmap)
@@ -219,9 +239,16 @@ def inspect(embedding_file, padding_file, entire=False):
         # print ("raw first entity bitmap: ", first_entity_bitmap)
         # print ("raw second entity bitmap: ", second_entity_bitmap)
         
-        
+    print ("label count")
+    print (label_count)
 
 if __name__ == "__main__":
     # inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl', '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_with_xml_tag.pkl')
-    inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl', '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag.pkl', entire=True)    
+    # inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl', '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag.pkl', entire=True)
+
+    # inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag_4.pkl', '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag_4.pkl', entire=True)
+
+    inspect('/home/yuyi/cs6890/project/data/embedding_test_with_xml_tag_0.pkl', '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_with_xml_tag_0.pkl', entire=True)
+    
+    # inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl', '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_with_xml_tag.pkl', entire=True)        
     # inspect('embedding.pkl', '/home/yuyi/cs6890/project/data/padding_test_event_vs_time.pkl', entire=True)
