@@ -120,7 +120,10 @@ def inspect(embedding_file, padding_file, entire=False):
     pad = pickle.load(open(padding_file, 'rb'))
 
     # training data
-    data = pad[0]
+    # data = pad[0]
+
+    # dev data
+    data = pad[1]
 
     # testing data
     # data = pad[2]
@@ -248,7 +251,9 @@ if __name__ == "__main__":
 
     # inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag_4.pkl', '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag_4.pkl', entire=True)
 
-    inspect('/home/yuyi/cs6890/project/data/embedding_test_with_xml_tag_0.pkl', '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_with_xml_tag_0.pkl', entire=True)
+    # inspect('/home/yuyi/cs6890/project/data/embedding_test_with_xml_tag_0.pkl', '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_with_xml_tag_0.pkl', entire=True)
+
+    inspect('/home/yuyi/cs6890/project/data/embedding_test_with_xml_tag_1.pkl', '/home/yuyi/cs6890/project/data/step2_padding_test_event_vs_time_with_xml_tag_1.pkl', entire=True)
     
     # inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl', '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_with_xml_tag.pkl', entire=True)        
     # inspect('embedding.pkl', '/home/yuyi/cs6890/project/data/padding_test_event_vs_time.pkl', entire=True)

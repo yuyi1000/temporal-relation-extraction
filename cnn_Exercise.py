@@ -66,8 +66,10 @@ parser.add_argument('--thyme_data_dir',
                     # default='../data/padding_test_event_vs_event.pkl',
                     # default='../data/padding_test_event_vs_time.pkl',
                     # default='../data/padding_event_vs_event.pkl',
-                    default='../data/padding_event_vs_time_with_xml_tag.pkl',
+                    # default='../data/padding_event_vs_time_with_xml_tag.pkl',
                     # default='../data/padding_test_event_vs_time_with_xml_tag.pkl',
+                    # default='../data/step2_padding_test_event_vs_time_with_xml_tag.pkl',
+                    default='../data/step2_padding_event_vs_time_with_xml_tag.pkl',
                     help='Directory to put the thyme data.')
 
  

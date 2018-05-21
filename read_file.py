@@ -408,7 +408,7 @@ class THYME(object):
             if full_dataset:
                 self.train_set = self.load_data(pattern, nlp, thyme_data_path + '/train/', thyme_anno_path + '/train/', train_data_files,
                                                 train_anno_files, event_vs_event=False, event_vs_time=True)
-                self.dev_set = self.load_data(pattern, nlp, thyme_data_path + '/dev/', thyme_anno_path + '/dev/',
+                self.train2_set = self.load_data(pattern, nlp, thyme_data_path + '/dev/', thyme_anno_path + '/dev/',
                                               dev_data_files, dev_anno_files, event_vs_event=False, event_vs_time=True)
                 # self.test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
                 #                                test_anno_files, event_vs_event=False, event_vs_time=True)
@@ -419,7 +419,7 @@ class THYME(object):
                 # self.test_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, ['patient101_queries'],
                 #                                ['patient101_queries.ann'], event_vs_event=False, event_vs_time=True)
 
-                self.train2_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, [physio_graph_train_part_file],
+                self.dev_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, [physio_graph_train_part_file],
                                                [physio_graph_anno_train_part_file], event_vs_event=False, event_vs_time=True)
                 
                 self.test_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, [physio_graph_test_part_file],
@@ -428,7 +428,6 @@ class THYME(object):
                 # self.closure_test_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, ['patient101_queries'],
                 #                                        ['patient101_queries.ann'], event_vs_event=False, event_vs_time=True, closure_test_set=True)
                 self.closure_test_set = deepcopy(self.test_set)
-                self.combine_two_sets(self.train_set, self.dev_set)
                 self.combine_two_sets(self.train_set, self.train2_set)                
 
                 
@@ -437,13 +436,15 @@ class THYME(object):
             else:
                 self.train_set = self.load_data(pattern, nlp, thyme_data_path + '/train/', thyme_anno_path + '/train/',
                                                 train_data_files, train_anno_files_test, event_vs_event=False, event_vs_time=True)
-                self.dev_set = self.load_data(pattern, nlp, thyme_data_path + '/dev/', thyme_anno_path + '/dev/', dev_data_files,
+
+                self.train2_set = self.load_data(pattern, nlp, thyme_data_path + '/dev/', thyme_anno_path + '/dev/', dev_data_files,
                                               dev_anno_files_test, event_vs_event=False, event_vs_time=True)
+
+                self.dev_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, [physio_graph_train_part_file],
+                                               [physio_graph_anno_train_part_file], event_vs_event=False, event_vs_time=True)
+
                 # self.test_set = self.load_data(pattern, nlp, thyme_data_path + '/test/', thyme_anno_path + '/test/', test_data_files,
                 #                                test_anno_files_test, event_vs_event=False, event_vs_time=True)
-
-                self.train2_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, [physio_graph_train_part_file],
-                                               [physio_graph_anno_train_part_file], event_vs_event=False, event_vs_time=True)
                 
                 self.test_set = self.load_data(pattern, nlp, physio_graph_data_path, physio_graph_anno_path, [physio_graph_test_part_file],
                                                [physio_graph_anno_test_part_file], event_vs_event=False, event_vs_time=True)
@@ -1897,12 +1898,12 @@ def main():
         # word_emb_path = '/home/yuyi/models/glove.840B.300d.txt'
         # embedding = WordEmbedding2(word_emb_path, thyme.vocab)
         # Now it just uses randomized embedding
-        embedding = WordEmbedding2(thyme.vocab)
+        # embedding = WordEmbedding2(thyme.vocab)
         
         embedding_path = '/home/yuyi/cs6890/project/data/embedding_with_xml_tag_' + str(i) + '.pkl'
         # embedding_path = '/home/yuyi/cs6890/project/data/embedding_test_with_xml_tag_' + str(i) + '.pkl'
         # embedding_path = '/home/yuyi/cs6890/project/data/embedding_without_xml_tag.pkl'
-        pickle.dump(embedding, open(embedding_path, 'wb'))
+        # pickle.dump(embedding, open(embedding_path, 'wb'))
 
 
         embedding = pickle.load(open(embedding_path, 'rb'))
@@ -1934,7 +1935,7 @@ def main():
         if is_full_dataset:
             # padding_data_path = '/home/yuyi/cs6890/project/data/padding.pkl'
             # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_event.pkl'
-            padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag_' + str(i) + '.pkl'
+            padding_data_path = '/home/yuyi/cs6890/project/data/step2_padding_event_vs_time_with_xml_tag_' + str(i) + '.pkl'
             # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_without_xml_tag.pkl'
             # padding_data_path = '/home/yuyi/cs6890/project/data/padding_event_vs_time_without_xml_tag_pos_embed_source.pkl'
             # pickle.dump([train_set, dev_set, test_set, closure_test_set, train_label_count], open(padding_data_path, 'wb'))
@@ -1944,7 +1945,7 @@ def main():
 
             # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test.pkl'
             # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_event.pkl'
-            padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_with_xml_tag_' + str(i) + '.pkl'
+            padding_data_test_path = '/home/yuyi/cs6890/project/data/step2_padding_test_event_vs_time_with_xml_tag_' + str(i) + '.pkl'
             # padding_data_test_path = '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_without_xml_tag.pkl'
             # pickle.dump([train_set, dev_set, test_set, closure_test_set, train_label_count], open(padding_data_test_path, 'wb'))
             pickle.dump([train_set, dev_set, test_set, closure_test_set, train_dataset_size], open(padding_data_test_path, 'wb'))

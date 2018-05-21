@@ -456,7 +456,7 @@ class ConvNet(object):
       loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label, logits=logits))
 
       
-      cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label, logits=logits)
+      # cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label, logits=logits)
       # loss0 = tf.reduce_sum(tf.gather(cross_entropy, label0_pos)) / label0_count
       # loss1 = tf.reduce_sum(tf.gather(cross_entropy, label1_pos)) / label1_count
       # loss2 = tf.reduce_sum(tf.gather(cross_entropy, label2_pos)) / label2_count
@@ -468,13 +468,16 @@ class ConvNet(object):
       # loss8 = tf.reduce_sum(tf.gather(cross_entropy, label8_pos)) / label8_count
       # loss9 = tf.reduce_sum(tf.gather(cross_entropy, label9_pos)) / label9_count
 
-      loss_thyme = tf.reduce_sum(tf.gather(cross_entropy, thyme_pos)) / thyme_count
-      loss_physio = tf.reduce_sum(tf.gather(cross_entropy, physio_pos)) / physio_count
+      # loss_thyme = tf.reduce_sum(tf.gather(cross_entropy, thyme_pos)) / thyme_count
+      # loss_physio = tf.reduce_sum(tf.gather(cross_entropy, physio_pos)) / physio_count
       
       # loss = loss0 + loss1 + loss2 + loss3 + loss4 + loss5 + loss6 + loss7 + loss8 + loss9 + decay * tf.nn.l2_loss(dense_kernel)
       # print ("loss shape: ", loss.get_shape())
 
-      loss = loss_thyme + loss_physio
+      # loss = loss_thyme + loss_physio
+
+      # give more weight on physio graph corpus
+      # loss = loss_thyme + loss_physio * 2
       
       tf.summary.scalar("loss", loss)
 
@@ -925,10 +928,10 @@ class ConvNet(object):
         # save_path = saver.save(sess, model_path)
         # print ("Model saved in file: %s" % save_path)
 
-        '''
+        
         
 
-        saver.restore(sess, model_path)
+        # saver.restore(sess, model_path)
 
 
         
@@ -961,13 +964,18 @@ class ConvNet(object):
             # e = min(s + batch_size, train_size)
 
 
-            (batch_sent_embed, batch_event_one_hot,
-             batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label,
-             batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
-             batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+            # (batch_sent_embed, batch_event_one_hot,
+            #  batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label,
+            #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+            #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+            # = self.get_batch(dev_set, s, e)
+            
+
+            (batch_sent_embed, batch_event_one_hot, batch_timex3_one_hot, batch_first_entity_bitmap,
+             batch_second_entity_bitmap, batch_label, batch_thyme_pos, batch_physio_pos) \
             = self.get_batch(dev_set, s, e)
-            
-            
+
+
             _, loss_value, confusion_matrix_value \
             = sess.run([train_op, loss, confusion_matrix], \
                        feed_dict={sent_embed: batch_sent_embed,
@@ -978,15 +986,29 @@ class ConvNet(object):
                                   # boolean_features : batch_boolean_features,
                                   is_training: True,
                                   label: batch_label,
-                                  label1_pos: batch_label1_pos,
-                                  label2_pos: batch_label2_pos,
-                                  label3_pos: batch_label3_pos,
-                                  label4_pos: batch_label4_pos,
-                                  label5_pos: batch_label5_pos,
-                                  label6_pos: batch_label6_pos,
-                                  label7_pos: batch_label7_pos,
-                                  label8_pos: batch_label8_pos,
-                                  label9_pos: batch_label9_pos})
+                                  thyme_pos: batch_thyme_pos,
+                                  physio_pos: batch_physio_pos})
+
+            
+            # _, loss_value, confusion_matrix_value \
+            # = sess.run([train_op, loss, confusion_matrix], \
+            #            feed_dict={sent_embed: batch_sent_embed,
+            #                       event_one_hot: batch_event_one_hot,
+            #                       timex3_one_hot: batch_timex3_one_hot,
+            #                       first_entity_bitmap: batch_first_entity_bitmap,
+            #                       second_entity_bitmap: batch_second_entity_bitmap,
+            #                       # boolean_features : batch_boolean_features,
+            #                       is_training: True,
+            #                       label: batch_label,
+            #                       label1_pos: batch_label1_pos,
+            #                       label2_pos: batch_label2_pos,
+            #                       label3_pos: batch_label3_pos,
+            #                       label4_pos: batch_label4_pos,
+            #                       label5_pos: batch_label5_pos,
+            #                       label6_pos: batch_label6_pos,
+            #                       label7_pos: batch_label7_pos,
+            #                       label8_pos: batch_label8_pos,
+            #                       label9_pos: batch_label9_pos})
             
             s = e
           end_time = time.time()
@@ -1017,7 +1039,7 @@ class ConvNet(object):
           ###############################################################################
           # evaluate model every 100 epochs on closure test data, for S ^ Closure(H)
           # S is predicted value and H is manually annotated value.
-          if (i + 1) % 10 == 0:
+          if (i + 1) % 100 == 0:
 
             print ("this is from S ^ Closure(H) ")
 
@@ -1034,33 +1056,51 @@ class ConvNet(object):
             while s < test_size:
               e = s + batch_size         
 
-              (batch_sent_embed, batch_event_one_hot,
-               batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label,
-               batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
-               batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
-              = self.get_batch(closure_test_set, s, e)                    
+              # (batch_sent_embed, batch_event_one_hot,
+              #  batch_timex3_one_hot, batch_first_entity_bitmap, batch_second_entity_bitmap, batch_label,
+              #  batch_label0_pos, batch_label1_pos, batch_label2_pos, batch_label3_pos, batch_label4_pos, batch_label5_pos,
+              #  batch_label6_pos, batch_label7_pos, batch_label8_pos, batch_label9_pos) \
+              # = self.get_batch(closure_test_set, s, e)                    
               
-              
-              predict, correct, confusion_matrix_value \
-              = sess.run([pred, correct_num, confusion_matrix], \
+              (batch_sent_embed, batch_event_one_hot, batch_timex3_one_hot, batch_first_entity_bitmap,
+               batch_second_entity_bitmap, batch_label, batch_thyme_pos, batch_physio_pos) \
+              = self.get_batch(closure_test_set, s, e)
+
+
+              _, loss_value, confusion_matrix_value \
+              = sess.run([train_op, loss, confusion_matrix], \
                          feed_dict={sent_embed: batch_sent_embed,
                                     event_one_hot: batch_event_one_hot,
                                     timex3_one_hot: batch_timex3_one_hot,
                                     first_entity_bitmap: batch_first_entity_bitmap,
                                     second_entity_bitmap: batch_second_entity_bitmap,
                                     # boolean_features : batch_boolean_features,
-                                    is_training: False,
+                                    is_training: True,
                                     label: batch_label,
-                                    label0_pos: batch_label0_pos,
-                                    label1_pos: batch_label1_pos,
-                                    label2_pos: batch_label2_pos,
-                                    label3_pos: batch_label3_pos,
-                                    label4_pos: batch_label4_pos,
-                                    label5_pos: batch_label5_pos,
-                                    label6_pos: batch_label6_pos,
-                                    label7_pos: batch_label7_pos,
-                                    label8_pos: batch_label8_pos,
-                                    label9_pos: batch_label9_pos})
+                                    thyme_pos: batch_thyme_pos,
+                                    physio_pos: batch_physio_pos})
+
+              
+              # predict, correct, confusion_matrix_value \
+              # = sess.run([pred, correct_num, confusion_matrix], \
+              #            feed_dict={sent_embed: batch_sent_embed,
+              #                       event_one_hot: batch_event_one_hot,
+              #                       timex3_one_hot: batch_timex3_one_hot,
+              #                       first_entity_bitmap: batch_first_entity_bitmap,
+              #                       second_entity_bitmap: batch_second_entity_bitmap,
+              #                       # boolean_features : batch_boolean_features,
+              #                       is_training: False,
+              #                       label: batch_label,
+              #                       label0_pos: batch_label0_pos,
+              #                       label1_pos: batch_label1_pos,
+              #                       label2_pos: batch_label2_pos,
+              #                       label3_pos: batch_label3_pos,
+              #                       label4_pos: batch_label4_pos,
+              #                       label5_pos: batch_label5_pos,
+              #                       label6_pos: batch_label6_pos,
+              #                       label7_pos: batch_label7_pos,
+              #                       label8_pos: batch_label8_pos,
+              #                       label9_pos: batch_label9_pos})
 
               print ("predict: ", predict)
               
@@ -1070,10 +1110,6 @@ class ConvNet(object):
 
             print ("confusion matrix: ")
             print (total_confusion_matrix_value)
-
-
-
-          '''
 
 
         
