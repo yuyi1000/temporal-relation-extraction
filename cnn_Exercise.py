@@ -31,7 +31,7 @@ parser.add_argument('--num_epochs',
                     help='Number of epochs to run trainer.')
 parser.add_argument('--drop_out',
                     type=float,
-                    default=0.25, 
+                    default=0.5, 
                     help='drop out rate for last layer.')
 parser.add_argument('--decay',
                     type=float,
