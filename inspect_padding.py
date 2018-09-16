@@ -141,7 +141,7 @@ def inspect(embedding_file, padding_file, entire=False):
 
     # dataset count for training data
     count = pad[4]
-    for i in range(2):
+    for i in range(3):
         print ("label " + str(i) + ": " + str(count[i]))
 
     
