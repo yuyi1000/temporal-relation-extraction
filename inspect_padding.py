@@ -42,7 +42,7 @@ def inspect2(embedding_file,  data, entire=False):
         
         label = data[5][i]
 
-        is_thyme = data[6][i]
+        # is_thyme = data[6][i]
         
         sentence = ''
         event = ''
@@ -96,7 +96,7 @@ def inspect2(embedding_file,  data, entire=False):
         print ("second entity: ", second_entity)
         
         print ("label: ", label)
-        print ("is thyme: ", is_thyme)
+        # print ("is thyme: ", is_thyme)
         
         # print ("raw event bitmap: ", event_bitmap)
         # print ("raw timex3 bitmap: ", timex3_bitmap)
@@ -176,7 +176,7 @@ def inspect(embedding_file, padding_file, entire=False):
         
         label = data[5][i]
 
-        is_thyme = data[6][i]
+        # is_thyme = data[6][i]
 
         label_count[label] = label_count.get(label, 0) + 1
         
@@ -233,7 +233,7 @@ def inspect(embedding_file, padding_file, entire=False):
         
         print ("label: ", label)
 
-        print ("is thyme: ", is_thyme)
+        # print ("is thyme: ", is_thyme)
         # print ("raw event bitmap: ", event_bitmap)
         # print ("raw timex3 bitmap: ", timex3_bitmap)
         # print ("raw source bitmap: ", source_bitmap)
@@ -247,7 +247,7 @@ def inspect(embedding_file, padding_file, entire=False):
 
 if __name__ == "__main__":
     # inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl', '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_with_xml_tag.pkl')
-    # inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl', '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag.pkl', entire=True)
+    inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl', '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag.pkl', entire=True)
 
     # inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag_4.pkl', '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag_4.pkl', entire=True)
 
@@ -255,7 +255,7 @@ if __name__ == "__main__":
 
     # inspect('/home/yuyi/cs6890/project/data/embedding_test_with_xml_tag_1.pkl', '/home/yuyi/cs6890/project/data/step2_padding_test_event_vs_time_with_xml_tag_1.pkl', entire=True)
 
-    inspect('/home/yuyi/cs6890/project/data/step3_embedding_with_xml_tag_1.pkl', '/home/yuyi/cs6890/project/data/step3_padding_event_vs_time_with_xml_tag_1.pkl', entire=True)
+    # inspect('/home/yuyi/cs6890/project/data/step3_embedding_with_xml_tag_1.pkl', '/home/yuyi/cs6890/project/data/step3_padding_event_vs_time_with_xml_tag_1.pkl', entire=True)
 
     
     # inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl', '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_with_xml_tag.pkl', entire=True)        
