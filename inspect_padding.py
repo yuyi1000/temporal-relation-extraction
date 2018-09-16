@@ -120,13 +120,13 @@ def inspect(embedding_file, padding_file, entire=False):
     pad = pickle.load(open(padding_file, 'rb'))
 
     # training data
-    # data = pad[0]
+    data = pad[0]
 
     # dev data
     # data = pad[1]
 
     # testing data
-    data = pad[2]
+    # data = pad[2]
 
     # closure testing data
     # data = pad[3]
@@ -246,8 +246,8 @@ def inspect(embedding_file, padding_file, entire=False):
     print (label_count)
 
 if __name__ == "__main__":
-    # inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl', '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_with_xml_tag.pkl')
-    inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl', '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag.pkl', entire=True)
+    # inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl', '/home/yuyi/cs6890/project/data/padding_test_event_vs_time_with_xml_tag.pkl', entire=True)
+    inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag.pkl', '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag.pkl')
 
     # inspect('/home/yuyi/cs6890/project/data/embedding_with_xml_tag_4.pkl', '/home/yuyi/cs6890/project/data/padding_event_vs_time_with_xml_tag_4.pkl', entire=True)
 
